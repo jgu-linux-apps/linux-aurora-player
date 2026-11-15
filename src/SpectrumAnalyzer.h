@@ -17,6 +17,7 @@ public:
     QSize minimumSizeHint() const override { return QSize(160, 70); }
 
 public slots:
+    void release();                                   // pause: let bars and peak caps drop quickly
     void setSpectrum(const QVector<float> &magnitudeDb, int sampleRate);
     void reset();
 
@@ -36,4 +37,5 @@ private:
     QTimer m_timer;
     QElapsedTimer m_clock;
     qint64 m_last = 0;
+    bool m_released = false;
 };

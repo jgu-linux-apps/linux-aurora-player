@@ -13,6 +13,7 @@ constexpr int    kGap      = 3;
 constexpr double kFallDbS  = 40.0;
 constexpr double kHoldFall = 25.0;
 constexpr qint64 kHoldMs   = 1500;
+constexpr double kReleaseDbS = 400.0;     // fall speed after "release": ~0.25 s to empty
 constexpr qint64 kOverHoldMs = 3000;      // overs (> 0 dB) stay visible longer
 
 QColor ledColor(double loDb)
@@ -82,6 +83,7 @@ void LevelMeter::setLevels(const QVector<double> &peak, const QVector<double> &r
 {
     Q_UNUSED(rms);                      // LED ladder shows peak only
     if (peak.isEmpty()) return;
+    m_released = false;                 // new data: normal behaviour again
     if (peak.size() != m_disp.size()) setChannels(int(peak.size()));
     const qint64 now = m_clock.elapsed();
     for (int i = 0; i < peak.size(); ++i) {
@@ -91,8 +93,14 @@ void LevelMeter::setLevels(const QVector<double> &peak, const QVector<double> &r
     }
 }
 
+void LevelMeter::release()
+{
+    m_released = true;
+}
+
 void LevelMeter::reset()
 {
+    m_released = false;
     setChannels(int(m_disp.size()));
     update();
 }
@@ -104,9 +112,9 @@ void LevelMeter::tick()
     m_last = now;
     if (dt <= 0 || dt > 1) dt = 0.03;
     for (int i = 0; i < m_disp.size(); ++i) {
-        m_disp[i] = std::max(m_cfg.minDb, m_disp[i] - kFallDbS * dt);
-        if (now - m_holdAt[i] > (m_hold[i] > 0.0 ? kOverHoldMs : kHoldMs))
-            m_hold[i] = std::max(m_cfg.minDb, m_hold[i] - kHoldFall * dt);
+        m_disp[i] = std::max(m_cfg.minDb, m_disp[i] - (m_released ? kReleaseDbS : kFallDbS) * dt);
+        if (m_released || now - m_holdAt[i] > (m_hold[i] > 0.0 ? kOverHoldMs : kHoldMs))
+            m_hold[i] = std::max(m_cfg.minDb, m_hold[i] - (m_released ? kReleaseDbS : kHoldFall) * dt);
         m_hold[i] = std::max(m_hold[i], m_disp[i]);
     }
     update();

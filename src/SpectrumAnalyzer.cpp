@@ -8,6 +8,7 @@
 namespace {
 constexpr double kFallDbS  = 40.0;
 constexpr double kPeakFall = 25.0;
+constexpr double kReleaseDbS = 400.0;     // fall speed after "release": ~0.2 s to empty
 constexpr qint64 kPeakHold = 700;
 
 QString freqText(double f)
@@ -38,8 +39,14 @@ void SpectrumAnalyzer::setConfig(const SpectrumConfig &c)
     reset();
 }
 
+void SpectrumAnalyzer::release()
+{
+    m_released = true;
+}
+
 void SpectrumAnalyzer::reset()
 {
+    m_released = false;
     m_bar.fill(m_cfg.floorDb, m_cfg.bars);
     m_peak.fill(m_cfg.floorDb, m_cfg.bars);
     m_peakAt.fill(0, m_cfg.bars);
@@ -57,6 +64,7 @@ void SpectrumAnalyzer::setSpectrum(const QVector<float> &mag, int rate)
 {
     const int n = int(mag.size());
     if (n < 8 || rate <= 0) return;
+    m_released = false;                 // new data: normal behaviour again
 
     const double nyq = rate / 2.0;
     const double binW = nyq / n;                       // Hz per FFT band
@@ -94,9 +102,9 @@ void SpectrumAnalyzer::tick()
     if (dt <= 0 || dt > 1) dt = 0.03;
     const double floorDb = m_cfg.floorDb;
     for (int k = 0; k < m_bar.size(); ++k) {
-        m_bar[k] = std::max(floorDb, m_bar[k] - kFallDbS * dt);
-        if (now - m_peakAt[k] > kPeakHold)
-            m_peak[k] = std::max(floorDb, m_peak[k] - kPeakFall * dt);
+        m_bar[k] = std::max(floorDb, m_bar[k] - (m_released ? kReleaseDbS : kFallDbS) * dt);
+        if (m_released || now - m_peakAt[k] > kPeakHold)
+            m_peak[k] = std::max(floorDb, m_peak[k] - (m_released ? kReleaseDbS : kPeakFall) * dt);
         m_peak[k] = std::max(m_peak[k], m_bar[k]);
     }
     update();

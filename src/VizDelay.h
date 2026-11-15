@@ -27,6 +27,7 @@ public slots:
     void pushLevels(const QVector<double> &peakDb, const QVector<double> &rmsDb, qint64 streamMs);
     void pushSpectrum(const QVector<float> &magnitudeDb, int sampleRate, qint64 streamMs);
     void clear();                                            // seek, new track, stop: queued data is obsolete
+    void setPaused(bool paused);                             // nothing is shown while paused; resumes where it was
 
 signals:
     void levels(const QVector<double> &peakDb, const QVector<double> &rmsDb);
@@ -51,4 +52,5 @@ private:
     QTimer m_timer;
     QElapsedTimer m_clock;
     int m_delay = 0;
+    bool m_paused = false;
 };

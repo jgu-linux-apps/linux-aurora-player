@@ -17,6 +17,7 @@ public:
     QSize minimumSizeHint() const override;
 
 public slots:
+    void release();                                   // pause: let all LEDs and the peak-hold LED drop quickly
     void setLevels(const QVector<double> &peakDb, const QVector<double> &rmsDb);
     void reset();
 
@@ -40,4 +41,5 @@ private:
     QTimer m_timer;
     QElapsedTimer m_clock;
     qint64 m_last = 0;
+    bool m_released = false;
 };

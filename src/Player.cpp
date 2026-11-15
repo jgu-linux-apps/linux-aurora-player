@@ -363,7 +363,7 @@ void Player::pollBus()
         switch (GST_MESSAGE_TYPE(msg)) {
         case GST_MESSAGE_ELEMENT: {
             const GstStructure *s = gst_message_get_structure(msg);
-            if (!s || m_state != Playing) break;
+            if (!s || m_state == Stopped) break;      // while paused results are still queued (VizDelay holds them)
             // stream time of the audio this result describes (middle of its interval)
             guint64 st = 0, du = 0;
             const bool hasT = gst_structure_get_uint64(s, "stream-time", &st);

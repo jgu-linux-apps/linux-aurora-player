@@ -1,3 +1,13 @@
+sonora (0.3.9) unstable; urgency=low
+
+  * Pause: level meters and spectrum analyser stopped only after ~5 s, because
+    the normal fall-off plus the peak-hold LED / peak caps (hold 1.5 s, 3 s
+    after an over, then a slow fall) kept showing the last values. On pause
+    everything now drops within ~0.25 s, nothing new is shown while paused,
+    and the displays continue where they were after resume.
+
+ -- Your Name <you@example.com>  Fri, 13 Nov 2026 16:00:00 +0100
+
 sonora (0.3.8) unstable; urgency=low
 
   * Meters and spectrum are synchronised with the sound automatically: results

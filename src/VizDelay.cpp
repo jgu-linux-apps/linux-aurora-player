@@ -29,7 +29,7 @@ void VizDelay::enqueue(std::deque<Item> &q, Item &&it)
 {
     it.arrived = m_clock.elapsed();
     q.push_back(std::move(it));
-    if (!m_timer.isActive()) m_timer.start();
+    if (!m_paused && !m_timer.isActive()) m_timer.start();
 }
 
 void VizDelay::pushLevels(const QVector<double> &peak, const QVector<double> &rms, qint64 streamMs)
@@ -59,8 +59,17 @@ void VizDelay::clear()
     m_timer.stop();
 }
 
+void VizDelay::setPaused(bool paused)
+{
+    if (m_paused == paused) return;
+    m_paused = paused;
+    if (paused) m_timer.stop();                              // the sound has stopped: show nothing more
+    else if (!m_levels.empty() || !m_spectra.empty()) m_timer.start();
+}
+
 void VizDelay::pump()
 {
+    if (m_paused) { m_timer.stop(); return; }
     const qint64 now = m_clock.elapsed();
     const qint64 pos = m_pos ? m_pos() : -1;
     while (!m_levels.empty() && isDue(m_levels.front(), now, pos)) {

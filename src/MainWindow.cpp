@@ -925,6 +925,11 @@ void MainWindow::onStateChanged(Player::State s)
 {
     m_btnPause->setChecked(s == Player::Paused);
     if (m_mpris) m_mpris->setState(s);
+    m_viz->setPaused(s == Player::Paused);          // sound stopped: stop feeding the displays ...
+    if (s == Player::Paused) {                      // ... and let LEDs / bars / peak markers drop at once
+        m_meter->release();
+        m_spectrum->release();
+    }
     if (s == Player::Stopped) {
         m_viz->clear();
         m_meter->reset();
