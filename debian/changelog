@@ -1,3 +1,17 @@
+sonora (1.0.0) unstable; urgency=medium
+
+  * First stable release.
+  * Playback with GStreamer; multiple playlists (tabs, manager, columns,
+    filter, sorting, metadata tooltips, import/export M3U/PLS/XSPF).
+  * CUE sheet support (cue + FLAC/APE/WV/WAV/MP3 images).
+  * LED level meters with true-peak detection and a configurable spectrum
+    analyser, both synchronised with the sound.
+  * Selectable sound service and device, dark mode, MPRIS2 media keys.
+  * Documentation rewritten, licence text (COPYING) and .gitignore added,
+    desktop file registers cue sheets and playlists.
+
+ -- Your Name <you@example.com>  Fri, 20 Nov 2026 12:00:00 +0100
+
 sonora (0.3.9) unstable; urgency=low
 
   * Pause: level meters and spectrum analyser stopped only after ~5 s, because

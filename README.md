@@ -1,314 +1,126 @@
 # Sonora
 
-Audacious-style audio player (Qt 6 + GStreamer, C++17).
+An Audacious-style audio player for Linux, built with Qt 6 and GStreamer (C++17).
+Multiple playlists, CUE sheets, LED level meters with true-peak detection, a spectrum analyser, a selectable
+sound service, and media-key support.
 
-* **Transport buttons** like Audacious: Previous, Play, Pause, Stop, Next, Open, plus Repeat and Shuffle toggles.
-  Icons are drawn by the program itself (palette colour, framed buttons), so they are visible with any theme.
-  Play on a playing track restarts it; Previous/Next/Shuffle/Repeat stay inside the filtered playlist.
-* **Adding / importing** (File menu, the arrow next to the Open button, right-click in a list, drag & drop):
-  Add Files (Ctrl+O), Add Folder (Ctrl+Shift+O, recursive, natural sort), Add URL (Ctrl+U),
-  Import Playlist as New (Ctrl+I; one new playlist per chosen file) and Import Playlist into Current.
-  Supports M3U / M3U8 / PLS, relative paths are resolved against the playlist file.
-* **Playlist manager** (View > Playlist manager, Ctrl+Y; shown by default, dockable): lists all playlists with
-  their entry counts (`shown / total` while a filter is active); the playing one is marked.
-  Click = show it, double-click = play it, right-click = rename / close / new / import.
-* **Multiple playlists** as tabs: `+` button / Ctrl+T new, Ctrl+W close, F2 or double-click a tab to rename,
-  drag tabs to reorder, right-click a tab or an item for more (e.g. *Copy selected to playlist*).
-  File > Import/Export playlist (M3U). All playlists, names, order and the active tab are restored on start.
-  The tab of the playlist that is currently playing shows a play icon; you can browse other tabs meanwhile.
-* **Per-channel level meter** on the left: peak bar, RMS strip, peak-hold; range configurable (default -60 ... +1 dB).
-  The bar count follows the stream (mono, stereo, surround).
-* **Spectrum analyser**, visible by default (View > Spectrum analyser to hide): 56 log-spaced bars,
-  ~30 Hz - 20 kHz, peak caps.
-* **Playlist filter**, one per playlist (Ctrl+F): words are AND-matched, case-insensitive, against title and path.
-  While a filter is active the list shows only matches and Next / Previous / auto-advance / Repeat stay inside
-  the filtered set of the playing playlist. Enter plays the first match, Esc clears the filter.
-* Drag & drop files/folders (added to the visible playlist), `sonora file-or-dir ...` on the command line.
+Homepage: <https://github.com/przemyslawguza/sonora> - License: GPL-3.0-or-later (see `COPYING`).
 
+## Features
+
+**Playback**
+* Formats: whatever your GStreamer plugins decode (MP3, FLAC, Ogg Vorbis/Opus, AAC/M4A, WAV, WavPack, APE, ...).
+* Transport buttons like Audacious (Previous, Play, Pause, Stop, Next, Add, Repeat, Shuffle), drawn by the program so
+  they are visible with any theme. Repeat, Shuffle, Previous and Next work inside the *filtered* view of the playing
+  playlist.
+* Elapsed / total time; click the time (or View > Show remaining time) for the remaining time.
+* View > Dark mode.
+
+**Playlists**
+* Any number of playlists as tabs (`+`, Ctrl+T new, Ctrl+W close, F2 or double-click to rename, drag to reorder).
+  Everything is restored on start.
+* Playlist manager (View > Playlist manager, Ctrl+Y): all playlists with entry count and total length; click to
+  show, double-click to play.
+* Columns: title, artist, album, year, time, file type. Right-click the header to show/hide columns, click it to
+  sort (ascending / descending / original order).
+* Filter per playlist (Ctrl+F): all words must match title, artist, album, year or path. Enter plays the first
+  match, Esc clears.
+* Metadata tooltip on hover: artist, album, year, track/disc, genre, composer, length, codec, bitrate, sample rate,
+  channels/bit depth, file size, path, comment. Tags are read in a background thread and cached on disk.
+* Add Files / Folder (recursive) / URL, drag & drop, `sonora file-or-folder ...` on the command line.
+* Import M3U / M3U8 / PLS (as new playlists or into the current one; relative paths are resolved).
+* Export M3U8 (UTF-8), PLS or XSPF: whole playlist, only the entries shown, only the selected ones, or all playlists
+  into a folder; absolute or relative paths; optional track information.
+
+**CUE sheets**
+* Add a `.cue` (file dialog, drag & drop, folder, or an M3U) and every track becomes a playlist entry with title,
+  artist, album, year and genre from the sheet. The playlist may contain just the `.cue`; the audio file does not
+  have to be listed. Time, seeking and the length of the last track are per track.
+* Works with FLAC, APE, WavPack, WAV, MP3 ... images. The audio file is found even if the sheet names it with a
+  different case, extension (`album.wav` vs `album.flac`) or a Windows path; UTF-8 and legacy code pages
+  (Windows-1250/1251/1252, chosen by your language) are read.
+* Adding a folder does not list an image twice (as one big file *and* as tracks).
+* Exporting writes a cue sheet as one `.cue` line that other players understand (optional).
+
+**Level meters and spectrum**
+* Narrow LED ladder per channel (green, yellow, orange, red above 0 dB) with peak-hold LED; range, width, dB per LED
+  and scale are configurable.
+* True-peak (inter-sample) detection: the signal is oversampled to 192 kHz (at least 4x for 44.1/48 kHz material,
+  as in ITU-R BS.1770), so the red LED lights when the waveform *between* samples exceeds 0 dB.
+* Spectrum analyser: frequency range, linear/log axis, bar count, dB range and FFT size are configurable.
+* Both displays are synchronised with the sound automatically: every result carries the stream time of the audio it
+  describes and is shown when the audio sink has played up to that moment (the raw analysis runs 1.3 - 2.3 s ahead).
+  Preferences > *Synchronisation* has one fine-tuning offset for both (-500 ... +4000 ms) for devices that play
+  later than the computer thinks (Bluetooth, external amplifier).
+* On pause both drop immediately and resume in step.
+
+**Sound output** (File > Preferences)
+* Sound service: Automatic, PipeWire, PulseAudio, ALSA, JACK, OSS ... (only installed ones are listed), output
+  device per service, test tone, buffer/latency time, or a custom GStreamer sink (`alsasink device=hw:1,0`).
+  Changing the output while playing keeps the position.
+
+**Keyboard**
+
+| Key | Action |
+|---|---|
+| Space | play / pause (or start playing when stopped) |
+| X / C / V | play / pause / stop |
+| Z / B | previous / next |
+| Ctrl+Left / Ctrl+Right | seek -5 s / +5 s |
+| Media keys (Play/Pause, Stop, Next, Previous) | as expected - while the window has focus, and through MPRIS2 over D-Bus also when it is in the background (GNOME, KDE, ...) |
+| Ctrl+O / Ctrl+Shift+O / Ctrl+U | add files / folder / URL |
+| Ctrl+I | import playlist as new |
+| Ctrl+T / Ctrl+W / F2 | new / close / rename playlist |
+| Ctrl+F, Esc | filter, clear filter |
+| Delete | remove selected entries |
+| Ctrl+Y | playlist manager |
+| Ctrl+P | preferences |
+| Ctrl+Q | quit |
+
+Typing in the filter box is not affected by the single-letter keys.
 
 ## Defaults
 
-All defaults are defined in one place, `src/Config.h` (`load()` in `Config.cpp` falls back to them, and the
-Preferences texts are generated from them).
+All defaults live in `src/Config.h`; `load()` falls back to them and the Preferences texts are generated from them.
 
 | Setting | Default |
 |---|---|
 | Spectrum analyser | 0 - 22 kHz linear, 224 bars, 4096 FFT bands, display -60 ... -20 dB |
 | Level meters | -60 ... +1 dB, 0.33 dB per LED (about 186 LEDs), 10 px per channel, true-peak on |
-| Meter / spectrum fine-tuning | 0 ms (one shared setting; synchronisation with the sound is automatic) |
+| Meter / spectrum fine-tuning | 0 ms |
 
-Saved user settings override defaults: delete `~/.config/sonora/` to see new defaults.
-
-## Features
-
-* **Sound service** (File > Preferences > *Audio output*): Automatic, PipeWire, PulseAudio, ALSA, JACK, OSS ...
-  (only installed ones are listed), output device per service, test tone. *Audio advanced*: buffer / latency time
-  and a custom GStreamer sink (e.g. `alsasink device=hw:1,0`). Changing the output while playing keeps the position.
-* **Spectrum analyser**: frequency range, linear/log axis, bar count, dB range and FFT size are configurable
-  (Preferences > *Spectrum*); the FFT size takes effect from the next track.
-* **LED level meters**: narrow LED ladder (green, yellow, orange, red above 0 dB, peak-hold LED, overs held 3 s);
-  range, width per channel, dB per LED and the scale are configurable (Preferences > *Level meters*). The LED grid is
-  anchored at 0 dB, so a red LED starting at exactly 0 dB exists for any LED step.
-* **True-peak (inter-sample) metering**: the meter measures a copy of the signal oversampled to 192 kHz (at least 4x
-  for 44.1/48 kHz material, as in ITU-R BS.1770), so the red LED lights when the waveform between two samples goes
-  above 0 dB. Switch in Preferences > Level meters.
-* **Meters and spectrum follow the sound**: every analysis result carries the stream time of the audio it describes
-  and is shown when the audio sink has played up to that moment, so the pictures match what you hear whatever the
-  buffering (the raw analysis runs 1.3 - 2.3 s ahead of the sound). Preferences > *Synchronisation* has one
-  fine-tuning offset (-500 ... +4000 ms, default 0) for both displays, for devices that play later than the computer
-  thinks (Bluetooth, external amplifier). The time display and seek bar use the same real playback position.
-* **CUE sheets** (`.cue` + FLAC / APE / WavPack / WAV / MP3 ... image): add the `.cue` (Add Files, drag & drop, a folder,
-  or an M3U that lists it) and every track becomes its own playlist entry with title, artist, album, year and genre
-  from the sheet; time, seeking and the length of the last track are per track. The audio file is found even when the
-  sheet names it with another case or extension (`album.wav` in the sheet, `album.flac` on disk), the sheet may be
-  UTF-8 or a legacy code page (Windows-1250/1251/1252 by your language). When a folder is added, an image that a cue
-  sheet already splits is not listed a second time. Switching between tracks of one image does not re-open the file.
-  The playlist may contain just the `.cue`: the audio file does not have to be listed.
-  Not supported: a cue sheet embedded inside the FLAC (`CUESHEET` tag).
-* **Export** (File > Export Playlist…): M3U / M3U8 (UTF-8, with `#EXTINF`), PLS or XSPF; choose *what* - the whole
-  playlist, only the entries shown (filter and sort order are respected), only the selected entries, or all playlists
-  into a folder (one file each); *paths* absolute or relative to the exported file (portable); optional track
-  information. A cue sheet is written as one `.cue` entry, which other players expand themselves (switch it off to
-  get Sonora's own `file.cue#N` track entries). The last choices are remembered.
-* **Playlist columns**: title, artist, album, year, time, file type; right-click the header to show/hide columns,
-  click it to sort (asc / desc / original). The filter also matches artist, album and year.
-* **Metadata tooltip** when the mouse rests on a track: artist, album artist, album, year, track/disc, genre, composer,
-  length, format/codec, bitrate, sample rate, channels/bit depth, file size, path, comment. Tags are read in a
-  background thread (GstDiscoverer) and cached on disk, so the next start is instant.
-* **Time**: elapsed / total; click the time (or View > Show remaining time) for the remaining time. Playlist manager
-  also shows each playlist's total length.
-* **View > Dark mode**.
-* **Keys**: **Space** play/pause (Audacious-like: Z previous, X play, C pause, V stop, B next, Ctrl+Left/Right seek),
-  the keyboard's **Play/Pause, Stop, Next, Previous** keys work while the window is focused, and - through MPRIS2 over
-  D-Bus - also system-wide when the window is in the background (GNOME, KDE, ...). Typing in the filter box is not
-  affected.
-* **Fast start**: the window is painted first; GStreamer initialises in a parallel thread, the playback pipeline (and
-  the chosen sound service / device) is created when the first track starts, restoring playlists does not touch the
-  disk up front, and background tag reading starts ~1.5 s after the window is up (at most 4 files in flight).
-  `SONORA_PROFILE=1 sonora` prints start-up timings; `SONORA_DEBUG=1 sonora` prints player events
-  (open, pre-roll, seek, EOS, errors) - useful when something does not play.
+Saved settings override defaults: delete `~/.config/sonora/` to see new defaults.
 
 ## Build
+
+Requirements: Qt 6 (Widgets, DBus), GStreamer 1.x with `gstreamer1.0-plugins-good` (the `level` and `spectrum`
+elements), CMake >= 3.18, a C++17 compiler. The packages are built and targeted for Debian 13 and Ubuntu 26.04 LTS;
+older distributions (e.g. Debian 12 with Qt 6.4) are not tested.
 
     sudo apt install build-essential debhelper cmake pkgconf qt6-base-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
     cmake -S . -B build && cmake --build build -j && ./build/sonora
 
-## Debian package (Debian 12 "bookworm" / 13 "trixie")
+## Debian package (Debian 13 "trixie", Ubuntu 26.04 LTS)
 
-    ./build-deb.sh            # -> ../sonora_0.3.9_<arch>.deb
+    ./build-deb.sh            # -> ../sonora_1.0.0_<arch>.deb
 
-No architecture-specific code: run the same command on an arm64 or amd64 machine / chroot / container
-(`sbuild`, `pbuilder`, or Docker `arm64v8/debian:12` with QEMU). Cross-compiling with
-`dpkg-buildpackage -aarm64` additionally needs the Qt 6 host tools (`QT_HOST_PATH`); native builds are simpler.
+There is no architecture-specific code: run the same command on an amd64 or arm64 machine / chroot / container
+(`sbuild`, `pbuilder`, or a Docker `arm64v8/debian:trixie` container with QEMU). Cross-compiling with `dpkg-buildpackage -aarm64`
+additionally needs the Qt 6 host tools (`QT_HOST_PATH`); native builds are simpler.
 
-Runtime: the `level` and `spectrum` elements are in `gstreamer1.0-plugins-good`; codecs come from
-`-good`, `-ugly`, `-bad`, `-libav`. Display range of the analyser is set by `kFloorDb` / `kCeilDb`
-in `src/SpectrumAnalyzer.h`.
+Codecs come from the GStreamer plugin packages (`-good`, `-ugly`, `-bad`, `-libav`); the package recommends them
+together with the ALSA, PulseAudio and PipeWire sinks.
 
----
-# Sonora
+## Troubleshooting
 
-Audacious-style audio player (Qt 6 + GStreamer, C++17).
+* `SONORA_DEBUG=1 sonora` prints player events (open, pre-roll, seek, EOS, errors) - useful when something does not
+  play.
+* `SONORA_PROFILE=1 sonora` prints start-up timings.
 
-* **Transport buttons** like Audacious: Previous, Play, Pause, Stop, Next, Open, plus Repeat and Shuffle toggles.
-  Icons are drawn by the program itself (palette colour, framed buttons), so they are visible with any theme.
-  Play on a playing track restarts it; Previous/Next/Shuffle/Repeat stay inside the filtered playlist.
-* **Adding / importing** (File menu, the arrow next to the Open button, right-click in a list, drag & drop):
-  Add Files (Ctrl+O), Add Folder (Ctrl+Shift+O, recursive, natural sort), Add URL (Ctrl+U),
-  Import Playlist as New (Ctrl+I; one new playlist per chosen file) and Import Playlist into Current.
-  Supports M3U / M3U8 / PLS, relative paths are resolved against the playlist file.
-* **Playlist manager** (View > Playlist manager, Ctrl+Y; shown by default, dockable): lists all playlists with
-  their entry counts (`shown / total` while a filter is active); the playing one is marked.
-  Click = show it, double-click = play it, right-click = rename / close / new / import.
-* **Multiple playlists** as tabs: `+` button / Ctrl+T new, Ctrl+W close, F2 or double-click a tab to rename,
-  drag tabs to reorder, right-click a tab or an item for more (e.g. *Copy selected to playlist*).
-  File > Import/Export playlist (M3U). All playlists, names, order and the active tab are restored on start.
-  The tab of the playlist that is currently playing shows a play icon; you can browse other tabs meanwhile.
-* **Per-channel level meter** on the left: peak bar, RMS strip, peak-hold; scale -90 dB ... +3 dB.
-  The bar count follows the stream (mono, stereo, surround).
-* **Spectrum analyser**, visible by default (View > Spectrum analyser to hide): 56 log-spaced bars,
-  ~30 Hz - 20 kHz, peak caps.
-* **Playlist filter**, one per playlist (Ctrl+F): words are AND-matched, case-insensitive, against title and path.
-  While a filter is active the list shows only matches and Next / Previous / auto-advance / Repeat stay inside
-  the filtered set of the playing playlist. Enter plays the first match, Esc clears the filter.
-* Drag & drop files/folders (added to the visible playlist), `sonora file-or-dir ...` on the command line.
+## Known limitations
 
-
-## What's new in 0.3.2
-
-* **Sound service** (File > Preferences > *Audio output*): Automatic, PipeWire, PulseAudio, ALSA, JACK, OSS ...
-  (only installed ones are listed), output device per service, test tone. *Audio advanced*: buffer / latency time
-  and a custom GStreamer sink (e.g. `alsasink device=hw:1,0`). Changing the output while playing keeps the position.
-* **Spectrum analyser**: default **0 - 24 kHz**, **112 bars** (2x) and **2048 FFT bands** (2x precision); frequency range,
-  linear/log axis, bar count, dB range and FFT size are configurable (Preferences > *Spectrum*).
-* **LED level meters**: narrow LED ladder (green, yellow, orange, red above 0 dB, peak-hold LED); range, width per
-  channel, dB per LED and the scale are configurable (Preferences > *Level meters*).
-* **Playlist columns**: title, artist, album, year, time, file type; right-click the header to show/hide columns,
-  click it to sort (asc / desc / original). The filter also matches artist, album and year.
-* **Metadata tooltip** when the mouse rests on a track: artist, album artist, album, year, track/disc, genre, composer,
-  length, format/codec, bitrate, sample rate, channels/bit depth, file size, path, comment. Tags are read in a
-  background thread (GstDiscoverer) and cached on disk, so the next start is instant.
-* **Time**: elapsed / total; click the time (or View > Show remaining time) for the remaining time. Playlist manager
-  also shows each playlist's total length.
-* **View > Dark mode**.
-* **Keys**: **Space** play/pause (Audacious-like: Z previous, X play, C pause, V stop, B next, Ctrl+Left/Right seek),
-  the keyboard's **Play/Pause, Stop, Next, Previous** keys work while the window is focused, and - through MPRIS2 over
-  D-Bus - also system-wide when the window is in the background (GNOME, KDE, ...). Typing in the filter box is not
-  affected.
-
-## Build
-
-    sudo apt install build-essential debhelper cmake pkgconf qt6-base-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-    cmake -S . -B build && cmake --build build -j && ./build/sonora
-
-## Debian package (Debian 12 "bookworm" / 13 "trixie")
-
-    ./build-deb.sh            # -> ../sonora_0.3.2_<arch>.deb
-
-No architecture-specific code: run the same command on an arm64 or amd64 machine / chroot / container
-(`sbuild`, `pbuilder`, or Docker `arm64v8/debian:12` with QEMU). Cross-compiling with
-`dpkg-buildpackage -aarm64` additionally needs the Qt 6 host tools (`QT_HOST_PATH`); native builds are simpler.
-
-Runtime: the `level` and `spectrum` elements are in `gstreamer1.0-plugins-good`; codecs come from
-`-good`, `-ugly`, `-bad`, `-libav`. Display range of the analyser is set by `kFloorDb` / `kCeilDb`
-in `src/SpectrumAnalyzer.h`.
----
-# Sonora
-
-Audacious-style audio player (Qt 6 + GStreamer, C++17).
-
-* **Transport buttons** like Audacious: Previous, Play, Pause, Stop, Next, Open, plus Repeat and Shuffle toggles.
-  Icons are drawn by the program itself (palette colour, framed buttons), so they are visible with any theme.
-  Play on a playing track restarts it; Previous/Next/Shuffle/Repeat stay inside the filtered playlist.
-* **Adding / importing** (File menu, the arrow next to the Open button, right-click in a list, drag & drop):
-  Add Files (Ctrl+O), Add Folder (Ctrl+Shift+O, recursive, natural sort), Add URL (Ctrl+U),
-  Import Playlist as New (Ctrl+I; one new playlist per chosen file) and Import Playlist into Current.
-  Supports M3U / M3U8 / PLS, relative paths are resolved against the playlist file.
-* **Playlist manager** (View > Playlist manager, Ctrl+Y; shown by default, dockable): lists all playlists with
-  their entry counts (`shown / total` while a filter is active); the playing one is marked.
-  Click = show it, double-click = play it, right-click = rename / close / new / import.
-* **Multiple playlists** as tabs: `+` button / Ctrl+T new, Ctrl+W close, F2 or double-click a tab to rename,
-  drag tabs to reorder, right-click a tab or an item for more (e.g. *Copy selected to playlist*).
-  File > Import/Export playlist (M3U). All playlists, names, order and the active tab are restored on start.
-  The tab of the playlist that is currently playing shows a play icon; you can browse other tabs meanwhile.
-* **Per-channel level meter** on the left: peak bar, RMS strip, peak-hold; scale -90 dB ... +3 dB.
-  The bar count follows the stream (mono, stereo, surround).
-* **Spectrum analyser**, visible by default (View > Spectrum analyser to hide): 56 log-spaced bars,
-  ~30 Hz - 20 kHz, peak caps.
-* **Playlist filter**, one per playlist (Ctrl+F): words are AND-matched, case-insensitive, against title and path.
-  While a filter is active the list shows only matches and Next / Previous / auto-advance / Repeat stay inside
-  the filtered set of the playing playlist. Enter plays the first match, Esc clears the filter.
-* Drag & drop files/folders (added to the visible playlist), `sonora file-or-dir ...` on the command line.
-
-
-## What's new in 0.3.1
-
-* **Sound service** (File > Preferences > *Audio output*): Automatic, PipeWire, PulseAudio, ALSA, JACK, OSS ...
-  (only installed ones are listed), output device per service, test tone. *Audio advanced*: buffer / latency time
-  and a custom GStreamer sink (e.g. `alsasink device=hw:1,0`). Changing the output while playing keeps the position.
-* **Spectrum analyser**: default **0 - 24 kHz**, **112 bars** (2x) and **2048 FFT bands** (2x precision); frequency range,
-  linear/log axis, bar count, dB range and FFT size are configurable (Preferences > *Spectrum*).
-* **LED level meters**: narrow LED ladder (green, yellow, orange, red above 0 dB, peak-hold LED); range, width per
-  channel, dB per LED and the scale are configurable (Preferences > *Level meters*).
-* **Playlist columns**: title, artist, album, year, time, file type; right-click the header to show/hide columns,
-  click it to sort (asc / desc / original). The filter also matches artist, album and year.
-* **Metadata tooltip** when the mouse rests on a track: artist, album artist, album, year, track/disc, genre, composer,
-  length, format/codec, bitrate, sample rate, channels/bit depth, file size, path, comment. Tags are read in a
-  background thread (GstDiscoverer) and cached on disk, so the next start is instant.
-* **Time**: elapsed / total; click the time (or View > Show remaining time) for the remaining time. Playlist manager
-  also shows each playlist's total length.
-* **View > Dark mode**.
-* **Keys**: **Space** play/pause (Audacious-like: Z previous, X play, C pause, V stop, B next, Ctrl+Left/Right seek),
-  the keyboard's **Play/Pause, Stop, Next, Previous** keys work while the window is focused, and - through MPRIS2 over
-  D-Bus - also system-wide when the window is in the background (GNOME, KDE, ...). Typing in the filter box is not
-  affected.
-
-## Build
-
-    sudo apt install build-essential debhelper cmake pkgconf qt6-base-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-    cmake -S . -B build && cmake --build build -j && ./build/sonora
-
-## Debian package (Debian 12 "bookworm" / 13 "trixie")
-
-    ./build-deb.sh            # -> ../sonora_0.3.1_<arch>.deb
-
-No architecture-specific code: run the same command on an arm64 or amd64 machine / chroot / container
-(`sbuild`, `pbuilder`, or Docker `arm64v8/debian:12` with QEMU). Cross-compiling with
-`dpkg-buildpackage -aarm64` additionally needs the Qt 6 host tools (`QT_HOST_PATH`); native builds are simpler.
-
-Runtime: the `level` and `spectrum` elements are in `gstreamer1.0-plugins-good`; codecs come from
-`-good`, `-ugly`, `-bad`, `-libav`. Display range of the analyser is set by `kFloorDb` / `kCeilDb`
-in `src/SpectrumAnalyzer.h`.
----
-# Sonora
-
-Audacious-style audio player (Qt 6 + GStreamer, C++17).
-
-* **Transport buttons** like Audacious: Previous, Play, Pause, Stop, Next, Open, plus Repeat and Shuffle toggles.
-  Icons are drawn by the program itself (palette colour, framed buttons), so they are visible with any theme.
-  Play on a playing track restarts it; Previous/Next/Shuffle/Repeat stay inside the filtered playlist.
-* **Adding / importing** (File menu, the arrow next to the Open button, right-click in a list, drag & drop):
-  Add Files (Ctrl+O), Add Folder (Ctrl+Shift+O, recursive, natural sort), Add URL (Ctrl+U),
-  Import Playlist as New (Ctrl+I; one new playlist per chosen file) and Import Playlist into Current.
-  Supports M3U / M3U8 / PLS, relative paths are resolved against the playlist file.
-* **Playlist manager** (View > Playlist manager, Ctrl+Y; shown by default, dockable): lists all playlists with
-  their entry counts (`shown / total` while a filter is active); the playing one is marked.
-  Click = show it, double-click = play it, right-click = rename / close / new / import.
-* **Multiple playlists** as tabs: `+` button / Ctrl+T new, Ctrl+W close, F2 or double-click a tab to rename,
-  drag tabs to reorder, right-click a tab or an item for more (e.g. *Copy selected to playlist*).
-  File > Import/Export playlist (M3U). All playlists, names, order and the active tab are restored on start.
-  The tab of the playlist that is currently playing shows a play icon; you can browse other tabs meanwhile.
-* **Per-channel level meter** on the left: peak bar, RMS strip, peak-hold; scale -90 dB ... +3 dB.
-  The bar count follows the stream (mono, stereo, surround).
-* **Spectrum analyser**, visible by default (View > Spectrum analyser to hide): 56 log-spaced bars,
-  ~30 Hz - 20 kHz, peak caps.
-* **Playlist filter**, one per playlist (Ctrl+F): words are AND-matched, case-insensitive, against title and path.
-  While a filter is active the list shows only matches and Next / Previous / auto-advance / Repeat stay inside
-  the filtered set of the playing playlist. Enter plays the first match, Esc clears the filter.
-* Drag & drop files/folders (added to the visible playlist), `sonora file-or-dir ...` on the command line.
-
-## Build
-
-    sudo apt install build-essential debhelper cmake pkgconf qt6-base-dev libgstreamer1.0-dev
-    cmake -S . -B build && cmake --build build -j && ./build/sonora
-
-## Debian package (Debian 12 "bookworm" / 13 "trixie")
-
-    ./build-deb.sh            # -> ../sonora_0.2.2_<arch>.deb
-
-No architecture-specific code: run the same command on an arm64 or amd64 machine / chroot / container
-(`sbuild`, `pbuilder`, or Docker `arm64v8/debian:12` with QEMU). Cross-compiling with
-`dpkg-buildpackage -aarm64` additionally needs the Qt 6 host tools (`QT_HOST_PATH`); native builds are simpler.
-
-Runtime: the `level` and `spectrum` elements are in `gstreamer1.0-plugins-good`; codecs come from
-`-good`, `-ugly`, `-bad`, `-libav`. Display range of the analyser is set by `kFloorDb` / `kCeilDb`
-in `src/SpectrumAnalyzer.h`.
-
----
-# Sonora
-
-Audacious-style audio player (Qt 6 + GStreamer, C++17).
-
-* **Per-channel level meter** on the left: peak bar, RMS strip, peak-hold; scale -90 dB … +3 dB.
-  Works for mono, stereo and multichannel files (the bar count follows the stream).
-* **Playlist filter** (Ctrl+F): words are AND-matched, case-insensitive, against title and full path.
-  While a filter is active the list shows only matches and Next / Previous / auto-advance / Repeat
-  stay inside the filtered set. If the playing item is not in the filter, Next starts at the first
-  match. Enter in the filter box plays the first match, Esc clears the filter.
-* Drag & drop files/folders, `sonora file-or-dir ...` on the command line, playlist restored on start.
-
-## Build
-
-    sudo apt install build-essential debhelper cmake pkgconf qt6-base-dev libgstreamer1.0-dev
-    cmake -S . -B build && cmake --build build -j && ./build/sonora
-
-## Debian package (Debian 12 "bookworm" / 13 "trixie")
-
-    ./build-deb.sh            # -> ../sonora_0.1.0_<arch>.deb
-
-The code has no architecture-specific parts, so run the same command on an arm64 or amd64
-machine / chroot / container (e.g. `sbuild`, `pbuilder`, or Docker `arm64v8/debian:12` with QEMU).
-Cross-compiling with `dpkg-buildpackage -aarm64` additionally needs Qt 6 host tools set up
-(`QT_HOST_PATH`) - building natively per architecture is the simplest route.
-
-Runtime codecs come from GStreamer plugins (`-good`, recommended `-ugly`, `-bad`, `-libav`).
+* A cue sheet embedded inside a FLAC (`CUESHEET` tag) is not read; use an external `.cue`.
+* No cover art, tag editing, equaliser or ReplayGain.
+* Tracks that are separate files are not played gaplessly (tracks of one cue image switch without re-opening the file).
+* The meters and spectrum rely on the sound sink reporting its playback position; if a sink does not, they fall back
+  to a plain delay (the fine-tuning offset).

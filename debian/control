@@ -9,6 +9,9 @@ Build-Depends: debhelper-compat (= 13),
                libgstreamer1.0-dev,
                libgstreamer-plugins-base1.0-dev
 Standards-Version: 4.6.2
+Homepage: https://github.com/przemyslawguza/sonora
+Vcs-Browser: https://github.com/przemyslawguza/sonora
+Vcs-Git: https://github.com/przemyslawguza/sonora.git
 Rules-Requires-Root: no
 
 Package: sonora
@@ -23,10 +26,12 @@ Recommends: gstreamer1.0-plugins-ugly,
             gstreamer1.0-pulseaudio,
             gstreamer1.0-pipewire,
             qt6-wayland
-Description: audio player with playlists, LED meters, spectrum analyser and media keys
+Description: audio player with playlists, CUE sheets, LED meters and spectrum analyser
  Sonora is an Audacious-style audio player built with Qt 6 and GStreamer.
  Features: any number of playlists with artist/album/year/time/type columns
- and metadata tooltips, per-playlist filter, LED level meters, a configurable
- spectrum analyser, selectable sound service (PipeWire, PulseAudio, ALSA,
- JACK, ...) and output device, dark mode, and MPRIS2 support so that the
- keyboard's dedicated media keys work.
+ and metadata tooltips, per-playlist filter, CUE sheet support (cue + FLAC
+ and other images), playlist import/export (M3U, PLS, XSPF), LED level
+ meters with true-peak detection, a configurable spectrum analyser that is
+ synchronised with the sound, selectable sound service (PipeWire,
+ PulseAudio, ALSA, JACK, ...) and output device, dark mode, and MPRIS2
+ support so that the keyboard's dedicated media keys work.

@@ -2,10 +2,10 @@
 Type=Application
 Name=Sonora
 GenericName=Audio Player
-Comment=Audio player with playlists, level meters and spectrum analyser
+Comment=Audio player with playlists, CUE sheets, level meters and spectrum analyser
 Exec=sonora %F
 Icon=sonora
 Terminal=false
 Categories=AudioVideo;Audio;Player;Qt;
-MimeType=audio/mpeg;audio/flac;audio/ogg;audio/x-wav;audio/mp4;audio/aac;audio/x-vorbis+ogg;audio/opus;
-Keywords=music;player;audio;mp3;flac;
+MimeType=audio/mpeg;audio/flac;audio/x-flac;audio/ogg;audio/x-wav;audio/mp4;audio/aac;audio/x-vorbis+ogg;audio/opus;audio/x-opus+ogg;application/x-cue;audio/x-mpegurl;audio/x-scpls;application/xspf+xml;
+Keywords=music;player;audio;mp3;flac;cue;playlist;
