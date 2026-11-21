@@ -2,6 +2,7 @@
 #include <QElapsedTimer>
 #include <QMainWindow>
 #include <QPointer>
+#include <array>
 #include "Config.h"
 #include "Player.h"
 
@@ -14,6 +15,10 @@ class QDockWidget;
 class QTreeWidget;
 class QMenu;
 class QTimer;
+class QListWidget;
+class QSplitter;
+class QActionGroup;
+class QFrame;
 class LevelMeter;
 class SpectrumAnalyzer;
 class PlaylistWidget;
@@ -73,7 +78,10 @@ private:
     void updateNowPlaying();
     void updateTimeLabel(qint64 posMs, qint64 durMs);
     void updateOutputLabel();
-    void applyTheme(bool dark);
+    void applyTheme();
+    bool systemIsDark() const;
+    void updateHero();
+    void updateUpNext();
     QString dataDir() const;
     void savePlaylists();
     void loadPlaylists();
@@ -93,6 +101,14 @@ private:
     QAction *m_repeat, *m_shuffle, *m_spectrumAct, *m_darkAct, *m_remainAct;
     QLabel *m_outputLabel = nullptr;
     QMenu *m_viewMenu = nullptr;
+    QActionGroup *m_themeGroup = nullptr;
+    QString m_theme = QStringLiteral("aurora");
+    QAction *m_playlistAct = nullptr;
+    QSplitter *m_split = nullptr;
+    QWidget *m_cover = nullptr;
+    QLabel *m_heroKicker = nullptr, *m_heroTitle = nullptr, *m_heroSub = nullptr, *m_peakLabel = nullptr;
+    std::array<QLabel *, 3> m_chips{};
+    QListWidget *m_upNext = nullptr;
 
     QDockWidget *m_dock = nullptr;          // playlist manager
     QTreeWidget *m_mgr = nullptr;

@@ -41,5 +41,9 @@ int main(int argc, char **argv)
         w.playFirst();
     }
     QTimer::singleShot(0, [&] { mark("event loop running"); });
+    // AURORA_SCREENSHOT=/path.png: save the window after start-up and quit (UI tests, docs)
+    const QString shot = qEnvironmentVariable("AURORA_SCREENSHOT");
+    if (!shot.isEmpty())
+        QTimer::singleShot(2500, [&w, shot] { w.grab().save(shot); QApplication::quit(); });
     return app.exec();
 }

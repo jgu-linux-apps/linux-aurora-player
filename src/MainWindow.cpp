@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "AudioOutput.h"
+#include "AuroraTheme.h"
 #include "CueSheet.h"
 #include "ExportDialog.h"
 #include "PlaylistExporter.h"
@@ -14,6 +15,14 @@
 #include "VizDelay.h"
 
 #include <QAction>
+#include <QActionGroup>
+#include <QFrame>
+#include <QGridLayout>
+#include <QListWidget>
+#include <QPainter>
+#include <QPainterPath>
+#include <QSplitter>
+#include <QStyleHints>
 #include <QApplication>
 #include <QCollator>
 #include <QDir>
@@ -58,6 +67,36 @@ const QStringList kAudioSuffixes = {
     "mp3", "flac", "ogg", "oga", "opus", "wav", "m4a", "aac", "wma", "ape", "wv",
     "mka", "mpc", "aif", "aiff", "ac3", "dts"};
 const QStringList kPlaylistSuffixes = {"m3u", "m3u8", "pls"};
+
+// Album tile of the "now playing" card: Aurora gradient with a disc glyph.
+class CoverTile : public QWidget
+{
+public:
+    explicit CoverTile(QWidget *parent = nullptr) : QWidget(parent) { setFixedSize(128, 128); }
+protected:
+    void paintEvent(QPaintEvent *) override
+    {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        const bool dark = palette().color(QPalette::Window).lightness() < 128;
+        const Aurora::Colors c = Aurora::colors(dark);
+        QLinearGradient g(0, 0, width(), height());
+        g.setColorAt(0, c.acc);
+        g.setColorAt(1, c.acc2);
+        QPainterPath path;
+        path.addRoundedRect(QRectF(rect()), 16, 16);
+        p.fillPath(path, dark ? QBrush(QColor("#151827")) : QBrush(g));
+        if (dark) { p.setPen(QPen(QBrush(g), 3)); p.drawPath(path); }
+        const QPointF m = QRectF(rect()).center();
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(255, 255, 255, dark ? 40 : 70));
+        p.drawEllipse(m, 44, 44);
+        p.setBrush(dark ? QBrush(g) : QBrush(Qt::white));
+        p.drawEllipse(m, 16, 16);
+        p.setBrush(dark ? QColor("#151827") : c.acc);
+        p.drawEllipse(m, 5, 5);
+    }
+};
 
 QPalette darkPalette()
 {
@@ -164,7 +203,12 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     m_shuffle->setChecked(s.value("shuffle", false).toBool());
     m_spectrumAct->setChecked(s.value("spectrum", true).toBool());      // visible by default
     m_remainAct->setChecked(s.value("remaining", false).toBool());
-    m_darkAct->setChecked(s.value("darkMode", false).toBool());
+    m_theme = s.value("theme", s.value("darkMode", false).toBool() ? "classic-dark" : "aurora").toString();
+    for (QAction *a : m_themeGroup->actions())
+        if (a->data().toString() == m_theme) a->setChecked(true);
+    applyTheme();
+    m_playlistAct->setChecked(s.value("playlistVisible", true).toBool());
+    m_split->restoreState(s.value("splitter").toByteArray());
 
     m_player->setOutput(m_cfg.audio);            // only stored; applied when the first track starts
     updateOutputLabel();
@@ -244,39 +288,59 @@ void MainWindow::buildUi()
     m_spectrumAct->setChecked(true);
     m_remainAct = m_viewMenu->addAction(tr("Show &remaining time"));
     m_remainAct->setCheckable(true);
-    m_darkAct = m_viewMenu->addAction(tr("&Dark mode"));
-    m_darkAct->setCheckable(true);
-    connect(m_darkAct, &QAction::toggled, this, [this](bool on) { applyTheme(on); });
+    auto *themeMenu = m_viewMenu->addMenu(tr("&Theme"));
+    m_themeGroup = new QActionGroup(this);
+    const QList<QPair<QString, QString>> themes = {
+        {"aurora", tr("Aurora (follows system)")}, {"aurora-light", tr("Aurora light")},
+        {"aurora-dark", tr("Aurora dark")}, {"system", tr("System")}, {"classic-dark", tr("Classic dark")}};
+    for (const auto &t : themes) {
+        QAction *a = themeMenu->addAction(t.second);
+        a->setCheckable(true);
+        a->setData(t.first);
+        m_themeGroup->addAction(a);
+        if (t.first == "classic-dark") m_darkAct = a;
+    }
+    connect(m_themeGroup, &QActionGroup::triggered, this, [this](QAction *a) {
+        m_theme = a->data().toString();
+        applyTheme();
+    });
+    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this] {
+        if (m_theme == "aurora" || m_theme == "system") applyTheme();
+    });
 
     act(menuBar()->addMenu(tr("&Help")), tr("&About"), {}, &MainWindow::about);
 
-    // ---- left: LED level meter
+    // ================= C+ layout =================
+    // ---- LED level meter (in the "Level" card)
     m_meter = new LevelMeter;
     m_meter->setConfig(m_cfg.meter);
 
-    // ---- transport buttons, Audacious style: prev, play, pause, stop, next, add | repeat, shuffle
-    auto mkBtn = [this](const QString &tip, bool checkable = false) {
+    // ---- transport: round buttons, one big play/pause in the middle
+    auto mkBtn = [this](const QString &tip, bool checkable = false, int size = 46) {
         auto *b = new QToolButton;
+        b->setObjectName("round");
         b->setToolTip(tip);
         b->setToolButtonStyle(Qt::ToolButtonIconOnly);
-        b->setAutoRaise(false);                 // keep the button frame: always clearly visible
         b->setCheckable(checkable);
-        b->setFixedSize(40, 34);
-        b->setIconSize(QSize(22, 22));
+        b->setFixedSize(size, size);
+        b->setIconSize(QSize(20, 20));
         b->setFocusPolicy(Qt::NoFocus);         // so Space always means play/pause
+        b->setCursor(Qt::PointingHandCursor);
         return b;
     };
     m_btnPrev    = mkBtn(tr("Previous (within filter)"));
-    m_btnPlay    = mkBtn(tr("Play"));
-    m_btnPause   = mkBtn(tr("Pause / Resume"), true);
+    m_btnPlay    = mkBtn(tr("Play / Pause (Space)"), false, 76);
+    m_btnPlay->setObjectName("bigPlay");
+    m_btnPlay->setIconSize(QSize(34, 34));
+    m_btnPause   = m_btnPlay;                   // one button for play and pause
     m_btnStop    = mkBtn(tr("Stop"));
     m_btnNext    = mkBtn(tr("Next (within filter)"));
     m_btnOpen    = mkBtn(tr("Add files… (arrow: more)"));
+    m_btnOpen->setFixedWidth(62);
     m_btnRepeat  = mkBtn(tr("Repeat"), true);
     m_btnShuffle = mkBtn(tr("Shuffle"), true);
     connect(m_btnPrev,  &QToolButton::clicked, this, [this] { step(-1); });
-    connect(m_btnPlay,  &QToolButton::clicked, this, &MainWindow::playClicked);
-    connect(m_btnPause, &QToolButton::clicked, this, &MainWindow::pauseClicked);
+    connect(m_btnPlay,  &QToolButton::clicked, this, &MainWindow::togglePlayPause);
     connect(m_btnStop,  &QToolButton::clicked, this, &MainWindow::stopPlayback);
     connect(m_btnNext,  &QToolButton::clicked, this, [this] { step(+1); });
     connect(m_btnOpen,  &QToolButton::clicked, this, &MainWindow::addFiles);
@@ -289,7 +353,6 @@ void MainWindow::buildUi()
     addMenu->addAction(aImpCur);
     m_btnOpen->setMenu(addMenu);
     m_btnOpen->setPopupMode(QToolButton::MenuButtonPopup);
-    m_btnOpen->setFixedWidth(56);
     connect(m_btnRepeat,  &QToolButton::toggled, m_repeat,  &QAction::setChecked);
     connect(m_repeat,     &QAction::toggled, m_btnRepeat,  &QToolButton::setChecked);
     connect(m_btnShuffle, &QToolButton::toggled, m_shuffle, &QAction::setChecked);
@@ -297,28 +360,38 @@ void MainWindow::buildUi()
 
     m_vol = new QSlider(Qt::Horizontal);
     m_vol->setRange(0, 100);
-    m_vol->setFixedWidth(120);
     m_vol->setToolTip(tr("Volume"));
-    connect(m_vol, &QSlider::valueChanged, this, [this](int v) {
+    auto *volPct = new QLabel("80%");
+    volPct->setObjectName("muted");
+    volPct->setMinimumWidth(36);
+    connect(m_vol, &QSlider::valueChanged, this, [this, volPct](int v) {
         m_player->setVolume(std::pow(v / 100.0, 3.0));
         if (m_mpris) m_mpris->setVolume(v / 100.0);
+        volPct->setText(QString::number(v) + "%");
     });
 
     auto *transport = new QHBoxLayout;
-    for (QToolButton *b : {m_btnPrev, m_btnPlay, m_btnPause, m_btnStop, m_btnNext, m_btnOpen})
-        transport->addWidget(b);
-    transport->addSpacing(12);
-    transport->addWidget(m_btnRepeat);
-    transport->addWidget(m_btnShuffle);
+    transport->setSpacing(12);
     transport->addStretch(1);
-    transport->addWidget(new QLabel(tr("Vol")));
-    transport->addWidget(m_vol);
+    for (QToolButton *b : {m_btnShuffle, m_btnPrev, m_btnPlay, m_btnNext, m_btnRepeat})
+        transport->addWidget(b);
+    transport->addSpacing(8);
+    transport->addWidget(m_btnStop);
+    transport->addWidget(m_btnOpen);
+    transport->addStretch(1);
+
+    auto *volRow = new QHBoxLayout;
+    auto *volIcon = new QLabel(tr("Vol"));
+    volIcon->setObjectName("muted");
+    volRow->addWidget(volIcon);
+    volRow->addWidget(m_vol, 1);
+    volRow->addWidget(volPct);
 
     // ---- seek bar + elapsed / remaining time (click the time to switch)
     m_seek = new QSlider(Qt::Horizontal);
     m_seek->setRange(0, 0);
     m_timeBtn = new QToolButton;
-    m_timeBtn->setAutoRaise(true);
+    m_timeBtn->setObjectName("link");
     m_timeBtn->setFocusPolicy(Qt::NoFocus);
     m_timeBtn->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     m_timeBtn->setToolTip(tr("Click to switch between elapsed and remaining time"));
@@ -347,11 +420,106 @@ void MainWindow::buildUi()
     m_spectrum->setConfig(m_cfg.spectrum);
     connect(m_spectrumAct, &QAction::toggled, m_spectrum, &QWidget::setVisible);
 
-    // ---- playlist tabs
+    // ---- "now playing" hero card: cover tile, title, artist / album, format chips
+    auto *hero = new QFrame;
+    hero->setObjectName("hero");
+    auto *heroLay = new QHBoxLayout(hero);
+    heroLay->setContentsMargins(18, 18, 18, 18);
+    heroLay->setSpacing(18);
+    m_cover = new CoverTile;
+    heroLay->addWidget(m_cover);
+    auto *heroText = new QVBoxLayout;
+    heroText->setSpacing(4);
+    m_heroKicker = new QLabel(tr("Now playing"));
+    m_heroKicker->setObjectName("heroKicker");
+    m_heroTitle = new QLabel(tr("Nothing playing"));
+    m_heroTitle->setObjectName("heroTitle");
+    m_heroTitle->setWordWrap(true);
+    m_heroSub = new QLabel(tr("Add files or pick a track from the playlist"));
+    m_heroSub->setObjectName("heroSub");
+    m_heroSub->setWordWrap(true);
+    auto *chipRow = new QHBoxLayout;
+    chipRow->setSpacing(6);
+    for (QLabel *&c : m_chips) {
+        c = new QLabel;
+        c->setObjectName("chip");
+        c->hide();
+        chipRow->addWidget(c);
+    }
+    chipRow->addStretch(1);
+    heroText->addStretch(1);
+    heroText->addWidget(m_heroKicker);
+    heroText->addWidget(m_heroTitle);
+    heroText->addWidget(m_heroSub);
+    heroText->addSpacing(6);
+    heroText->addLayout(chipRow);
+    heroText->addStretch(1);
+    heroLay->addLayout(heroText, 1);
+
+    auto *leftCol = new QVBoxLayout;
+    leftCol->setSpacing(12);
+    leftCol->addWidget(hero);
+    leftCol->addWidget(m_spectrum, 1);
+    leftCol->addLayout(seekRow);
+    leftCol->addLayout(transport);
+    leftCol->addLayout(volRow);
+
+    // ---- "Level" card: LED ladder with true-peak
+    auto *levelCard = new QFrame;
+    levelCard->setObjectName("card");
+    auto *levelLay = new QVBoxLayout(levelCard);
+    levelLay->setContentsMargins(12, 10, 12, 12);
+    auto *levelTitle = new QLabel(tr("Level"));
+    levelTitle->setObjectName("cardTitle");
+    m_peakLabel = new QLabel;
+    m_peakLabel->setObjectName("muted");
+    levelLay->addWidget(levelTitle);
+    levelLay->addWidget(m_peakLabel);
+    levelLay->addWidget(m_meter, 1, Qt::AlignHCenter);
+
+    // ---- "Up next" card: the following tracks of the playing playlist
+    auto *nextCard = new QFrame;
+    nextCard->setObjectName("card");
+    nextCard->setMinimumWidth(260);
+    auto *nextLay = new QVBoxLayout(nextCard);
+    nextLay->setContentsMargins(12, 10, 12, 12);
+    auto *nextHead = new QHBoxLayout;
+    auto *nextTitle = new QLabel(tr("Up next"));
+    nextTitle->setObjectName("cardTitle");
+    auto *showAll = new QToolButton;
+    showAll->setObjectName("link");
+    showAll->setText(tr("Playlist"));
+    showAll->setCursor(Qt::PointingHandCursor);
+    showAll->setFocusPolicy(Qt::NoFocus);
+    nextHead->addWidget(nextTitle);
+    nextHead->addStretch(1);
+    nextHead->addWidget(showAll);
+    m_upNext = new QListWidget;
+    m_upNext->setObjectName("upNext");
+    m_upNext->setFocusPolicy(Qt::NoFocus);
+    m_upNext->setToolTip(tr("Double-click to play"));
+    connect(m_upNext, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *it) {
+        if (!m_playing) return;
+        const int src = it->data(Qt::UserRole).toInt();
+        const QModelIndex pi = m_playing->proxy()->mapFromSource(m_playing->model()->index(src));
+        if (pi.isValid()) playFrom(m_playing, pi.row());
+    });
+    nextLay->addLayout(nextHead);
+    nextLay->addWidget(m_upNext, 1);
+
+    auto *top = new QWidget;
+    auto *topLay = new QHBoxLayout(top);
+    topLay->setContentsMargins(0, 0, 0, 0);
+    topLay->setSpacing(14);
+    topLay->addLayout(leftCol, 1);
+    topLay->addWidget(levelCard);
+    topLay->addWidget(nextCard);
+
+    // ---- playlist tabs (bottom, can be hidden: View > Playlist)
     m_tabs = new QTabWidget;
     m_tabs->setMovable(true);
     m_tabs->setTabsClosable(true);
-    m_tabs->setDocumentMode(true);
+    m_tabs->setDocumentMode(false);
     connect(m_tabs, &QTabWidget::tabCloseRequested, this, &MainWindow::closePlaylist);
     connect(m_tabs->tabBar(), &QTabBar::tabBarDoubleClicked, this, [this](int i) {
         if (i >= 0) renamePlaylist(i); else createPlaylist();
@@ -364,17 +532,27 @@ void MainWindow::buildUi()
     plus->setToolTip(tr("New playlist (Ctrl+T)"));
     connect(plus, &QToolButton::clicked, this, [this] { createPlaylist(); });
     m_tabs->setCornerWidget(plus, Qt::TopRightCorner);
+    connect(m_tabs, &QTabWidget::currentChanged, this, [this] { updateUpNext(); });
 
-    auto *right = new QVBoxLayout;
-    right->addLayout(transport);
-    right->addLayout(seekRow);
-    right->addWidget(m_spectrum);
-    right->addWidget(m_tabs, 1);
+    m_playlistAct = m_viewMenu->addAction(tr("&Playlist"));
+    m_playlistAct->setCheckable(true);
+    m_playlistAct->setChecked(true);
+    m_playlistAct->setShortcut(QKeySequence("Ctrl+L"));
+    connect(m_playlistAct, &QAction::toggled, m_tabs, &QWidget::setVisible);
+    connect(showAll, &QToolButton::clicked, m_playlistAct, &QAction::toggle);
+
+    m_split = new QSplitter(Qt::Vertical);
+    m_split->setChildrenCollapsible(false);
+    m_split->setHandleWidth(10);
+    m_split->addWidget(top);
+    m_split->addWidget(m_tabs);
+    m_split->setStretchFactor(0, 0);
+    m_split->setStretchFactor(1, 1);
 
     auto *central = new QWidget;
-    auto *lay = new QHBoxLayout(central);
-    lay->addWidget(m_meter);            // left side, always visible
-    lay->addLayout(right, 1);
+    auto *lay = new QVBoxLayout(central);
+    lay->setContentsMargins(16, 10, 16, 8);
+    lay->addWidget(m_split);
     setCentralWidget(central);
 
     m_outputLabel = new QLabel;
@@ -384,8 +562,78 @@ void MainWindow::buildUi()
     refreshIcons();
 }
 
+void MainWindow::updateUpNext()
+{
+    if (!m_upNext) return;
+    m_upNext->clear();
+    PlaylistWidget *w = m_playing ? m_playing.data() : current();
+    if (!w) return;
+    PlaylistModel *m = w->model();
+    auto *px = w->proxy();
+    int start = 0;
+    if (m->current() >= 0) {
+        const QModelIndex pi = px->mapFromSource(m->index(m->current()));
+        start = pi.isValid() ? pi.row() + 1 : 0;
+    }
+    for (int r = start; r < px->rowCount() && m_upNext->count() < 8; ++r) {
+        const int src = px->mapToSource(px->index(r, 0)).row();
+        const TrackInfo ti = m->infoAt(src);
+        QString text = m->titleAt(src);
+        if (!ti.artist.isEmpty()) text += QStringLiteral("\n") + ti.artist;
+        auto *it = new QListWidgetItem(text);
+        it->setData(Qt::UserRole, src);
+        if (ti.durationMs > 0) it->setToolTip(formatDuration(ti.durationMs));
+        m_upNext->addItem(it);
+    }
+    if (m_upNext->count() == 0) {
+        auto *it = new QListWidgetItem(tr("End of playlist"));
+        it->setFlags(Qt::NoItemFlags);
+        m_upNext->addItem(it);
+    }
+}
+
+void MainWindow::updateHero()
+{
+    if (!m_heroTitle) return;
+    m_peakLabel->setText(m_cfg.meter.truePeak ? tr("True-peak on") : tr("Sample peak"));
+    const bool idle = !m_playing || m_player->state() == Player::Stopped || m_playing->model()->current() < 0;
+    if (idle) {
+        m_heroKicker->setText(tr("Stopped"));
+        m_heroTitle->setText(tr("Nothing playing"));
+        m_heroSub->setText(tr("Add files or pick a track from the playlist"));
+        for (QLabel *c : m_chips) c->hide();
+        updateUpNext();
+        return;
+    }
+    PlaylistModel *m = m_playing->model();
+    const int row = m->current();
+    const TrackInfo ti = m->infoAt(row);
+    m_heroKicker->setText(m_player->state() == Player::Paused ? tr("Paused") : tr("Now playing"));
+    m_heroTitle->setText(m->titleAt(row));
+    QStringList sub;
+    if (!ti.artist.isEmpty()) sub << ti.artist;
+    if (!ti.album.isEmpty()) sub << (ti.year > 0 ? QStringLiteral("%1 (%2)").arg(ti.album).arg(ti.year) : ti.album);
+    m_heroSub->setText(sub.join(QStringLiteral(" · ")));
+    QStringList chips;
+    if (!ti.codec.isEmpty()) chips << ti.codec;
+    if (ti.sampleRate > 0)
+        chips << (ti.depth > 0 ? QStringLiteral("%1 kHz / %2 bit").arg(ti.sampleRate / 1000.0, 0, 'g', 3).arg(ti.depth)
+                               : QStringLiteral("%1 kHz").arg(ti.sampleRate / 1000.0, 0, 'g', 3));
+    if (ti.bitrate > 0) chips << QStringLiteral("%1 kb/s").arg(ti.bitrate / 1000);
+    for (int i = 0; i < int(m_chips.size()); ++i) {
+        m_chips[i]->setVisible(i < chips.size());
+        if (i < chips.size()) m_chips[i]->setText(chips[i]);
+    }
+    updateUpNext();
+}
+
 // ================================================================== theme / icons
-void MainWindow::applyTheme(bool dark)
+bool MainWindow::systemIsDark() const
+{
+    return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+}
+
+void MainWindow::applyTheme()
 {
     static bool saved = false;
     static QString style;
@@ -395,12 +643,20 @@ void MainWindow::applyTheme(bool dark)
         pal = QApplication::palette();
         saved = true;
     }
-    if (dark) {
+    auto *app = qApp;
+    if (m_theme.startsWith("aurora")) {
+        const bool dark = m_theme == "aurora-dark" || (m_theme == "aurora" && systemIsDark());
+        QApplication::setStyle(QStringLiteral("Fusion"));
+        QApplication::setPalette(Aurora::palette(dark));
+        app->setStyleSheet(Aurora::styleSheet(dark));
+    } else if (m_theme == "classic-dark") {
         QApplication::setStyle(QStringLiteral("Fusion"));
         QApplication::setPalette(darkPalette());
+        app->setStyleSheet(Aurora::styleSheet(true).section("QSlider", 0, 0));   // keep the card layout readable
     } else {
         if (!style.isEmpty()) QApplication::setStyle(style);
         QApplication::setPalette(pal);
+        app->setStyleSheet(Aurora::styleSheet(systemIsDark()).section("QSlider", 0, 0));
     }
     if (m_btnPrev && m_tabs) refreshIcons();
 }
@@ -412,8 +668,12 @@ void MainWindow::refreshIcons()
     const qreal dpr = devicePixelRatioF();
     const int sz = 22;
     m_btnPrev->setIcon(make(Prev, pal, sz, dpr));
-    m_btnPlay->setIcon(make(Play, pal, sz, dpr));
-    m_btnPause->setIcon(make(Pause, pal, sz, dpr));
+    {
+        QPalette white = pal;               // the big play button is accent-filled: white glyph
+        white.setColor(QPalette::Active, QPalette::ButtonText, Qt::white);
+        white.setColor(QPalette::Disabled, QPalette::ButtonText, Qt::white);
+        m_btnPlay->setIcon(make(m_player->state() == Player::Playing ? Pause : Play, white, 34, dpr));
+    }
     m_btnStop->setIcon(make(Stop, pal, sz, dpr));
     m_btnNext->setIcon(make(Next, pal, sz, dpr));
     m_btnOpen->setIcon(make(Eject, pal, sz, dpr));
@@ -923,7 +1183,7 @@ void MainWindow::stopPlayback() { m_player->stop(); }
 
 void MainWindow::onStateChanged(Player::State s)
 {
-    m_btnPause->setChecked(s == Player::Paused);
+    if (m_btnPrev && m_tabs) refreshIcons();
     if (m_mpris) m_mpris->setState(s);
     m_viz->setPaused(s == Player::Paused);          // sound stopped: stop feeding the displays ...
     if (s == Player::Paused) {                      // ... and let LEDs / bars / peak markers drop at once
@@ -942,6 +1202,7 @@ void MainWindow::onStateChanged(Player::State s)
 
 void MainWindow::updateNowPlaying()
 {
+    updateHero();
     if (!m_mpris) return;
     if (!m_playing || m_player->state() == Player::Stopped || m_playing->model()->current() < 0) {
         setWindowTitle("Linux Aurora Player");
@@ -1132,7 +1393,9 @@ void MainWindow::closeEvent(QCloseEvent *e)
     s.setValue("shuffle", m_shuffle->isChecked());
     s.setValue("spectrum", m_spectrumAct->isChecked());
     s.setValue("remaining", m_remainAct->isChecked());
-    s.setValue("darkMode", m_darkAct->isChecked());
+    s.setValue("theme", m_theme);
+    s.setValue("playlistVisible", m_playlistAct->isChecked());
+    s.setValue("splitter", m_split->saveState());
     s.setValue("playlistHeader", current()->saveHeader());
     savePlaylists();
     m_player->stop();

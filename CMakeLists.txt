@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(linux-aurora-player VERSION 1.0.0 LANGUAGES CXX)
+project(linux-aurora-player VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -13,6 +13,7 @@ pkg_check_modules(GST REQUIRED IMPORTED_TARGET gstreamer-1.0 gstreamer-pbutils-1
 add_executable(linux-aurora-player
   src/main.cpp
   src/MainWindow.cpp       src/MainWindow.h
+  src/AuroraTheme.cpp      src/AuroraTheme.h
   src/LevelMeter.cpp       src/LevelMeter.h
   src/SpectrumAnalyzer.cpp src/SpectrumAnalyzer.h
   src/Player.cpp           src/Player.h

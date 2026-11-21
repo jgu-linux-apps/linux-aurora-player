@@ -1,3 +1,14 @@
+linux-aurora-player (0.2.0) unstable; urgency=medium
+
+  * New "C+" main window: now-playing card with format chips, larger round
+    transport buttons with one big play/pause, Level card (LED meters) and an
+    Up next card; the playlist can be hidden (View > Playlist, Ctrl+L).
+  * Aurora theme (light / dark / follows system) next to System and Classic
+    dark (View > Theme); switches live when the system colour scheme changes.
+  * AURORA_SCREENSHOT=file.png saves the window after start-up (UI tests).
+
+ -- JGu <noreply@example.invalid>  Sat, 21 Nov 2026 10:50:18 +0100
+
 linux-aurora-player (0.1.0) unstable; urgency=medium
 
   * Fork of Sonora 1.0.0 as Linux Aurora Player (JGu Linux Apps series).
