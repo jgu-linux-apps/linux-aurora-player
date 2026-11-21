@@ -3,6 +3,8 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFormLayout>
 #include <QGroupBox>
@@ -164,7 +166,18 @@ PreferencesDialog::PreferencesDialog(const AppConfig &cfg, QWidget *parent) : QD
                             "computer thinks (positive value = pictures later; negative = earlier). "
                             "One value is used for both displays.")));
 
+    // ------------------------------------------------ General
+    auto *gen = new QWidget;
+    auto *genForm = new QFormLayout(gen);
+    m_language = new QComboBox;
+    m_language->addItem(tr("Automatic (system language)"), "auto");
+    m_language->addItem(QStringLiteral("English"), "en");
+    m_language->addItem(QStringLiteral("Polski"), "pl");
+    genForm->addRow(tr("Language:"), m_language);
+    genForm->addRow(note(tr("The new language is used after the player restarts.")));
+
     auto *tabs = new QTabWidget;
+    tabs->addTab(gen, tr("General"));
     tabs->addTab(out, tr("Audio output"));
     tabs->addTab(adv, tr("Audio advanced"));
     tabs->addTab(sp, tr("Spectrum"));
@@ -244,6 +257,7 @@ void PreferencesDialog::setConfig(const AppConfig &cfg)
     m_mTrue->setChecked(m.truePeak);
 
     m_vizDelay->setValue(cfg.vizDelayMs);
+    m_language->setCurrentIndex(std::max(0, m_language->findData(cfg.language)));
 
     updateEnabled();
 }
@@ -251,6 +265,7 @@ void PreferencesDialog::setConfig(const AppConfig &cfg)
 AppConfig PreferencesDialog::config() const
 {
     AppConfig a;
+    a.language = m_language->currentData().toString();
     a.audio.backend = m_backend->currentData().toString();
     a.audio.device = m_device->currentData().toString();
     a.audio.bufferMs = m_buffer->value();

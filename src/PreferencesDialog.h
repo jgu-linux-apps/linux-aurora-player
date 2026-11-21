@@ -21,6 +21,7 @@ signals:
     void applied(const AppConfig &cfg);
 
 private:
+    QComboBox *m_language = nullptr;
     void setConfig(const AppConfig &cfg);
     void fillDevices(const QString &wanted);
     void updateHint();

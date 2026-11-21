@@ -47,6 +47,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QProcess>
 #include <QPushButton>
 #include <QRandomGenerator>
 #include <QSet>
@@ -912,6 +913,7 @@ void MainWindow::showPreferences()
 void MainWindow::applyConfig(const AppConfig &c)
 {
     const bool audioChanged = !(c.audio == m_cfg.audio);
+    const bool languageChanged = c.language != m_cfg.language;
     m_cfg = c;
     QSettings s;
     m_cfg.save(s);
@@ -922,6 +924,12 @@ void MainWindow::applyConfig(const AppConfig &c)
     m_player->setTruePeak(c.meter.truePeak);
     if (audioChanged) m_player->setOutput(c.audio);       // keeps the playing position
     updateOutputLabel();
+    if (languageChanged
+        && QMessageBox::question(this, tr("Language"), tr("Restart the player now to use the new language?"))
+               == QMessageBox::Yes) {
+        QProcess::startDetached(QApplication::applicationFilePath(), {});
+        quitApp();
+    }
 }
 
 void MainWindow::updateOutputLabel()

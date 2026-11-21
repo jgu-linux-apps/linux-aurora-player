@@ -37,6 +37,7 @@ struct AppConfig
     AudioOutputConfig audio;
     SpectrumConfig spectrum;
     MeterConfig meter;
+    QString language = QStringLiteral("auto");   // "auto", "en", "pl" (applied on restart)
     int vizDelayMs = 0;           // fine-tuning (ms) for level meters AND spectrum; they are synchronised with the sound automatically
 
     void load(QSettings &s)
@@ -44,10 +45,12 @@ struct AppConfig
         audio.load(s); spectrum.load(s); meter.load(s);
         const AppConfig d;                  // defaults live here only
         vizDelayMs = std::clamp(s.value("visualisation/delayMs", d.vizDelayMs).toInt(), -500, 4000);
+        language = s.value("general/language", d.language).toString();
     }
     void save(QSettings &s) const
     {
         audio.save(s); spectrum.save(s); meter.save(s);
         s.setValue("visualisation/delayMs", vizDelayMs);
+        s.setValue("general/language", language);
     }
 };

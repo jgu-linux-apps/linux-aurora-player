@@ -1,4 +1,9 @@
 #include <QApplication>
+#include <QLibraryInfo>
+#include <QLocale>
+#include <QSettings>
+#include <QTranslator>
+#include "Translator.h"
 #include <QElapsedTimer>
 #include <QTimer>
 #include <cstdio>
@@ -25,6 +30,17 @@ int main(int argc, char **argv)
     QApplication::setOrganizationName("linux-aurora-player");
     QApplication::setApplicationVersion(APP_VERSION);
     QGuiApplication::setDesktopFileName(QStringLiteral("linux-aurora-player"));   // dock icon on Wayland
+    {   // language: built-in Polish texts + Qt's own translations (dialog buttons) when installed
+        QSettings s;
+        if (usePolish(s.value("general/language", "auto").toString())) {
+            QLocale::setDefault(QLocale(QLocale::Polish, QLocale::Poland));
+            static AppTranslator app;
+            QCoreApplication::installTranslator(&app);
+            static QTranslator qt;
+            if (qt.load(QStringLiteral("qtbase_pl"), QLibraryInfo::path(QLibraryInfo::TranslationsPath)))
+                QCoreApplication::installTranslator(&qt);
+        }
+    }
     mark("Qt ready");
 
     MainWindow w;
