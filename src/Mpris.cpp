@@ -13,7 +13,7 @@ MprisService::MprisService(Player *player, QObject *parent) : QObject(parent), m
     new MprisPlayerAdaptor(this);
 
     QDBusConnection bus = QDBusConnection::sessionBus();
-    if (bus.isConnected() && bus.registerService("org.mpris.MediaPlayer2.sonora"))
+    if (bus.isConnected() && bus.registerService("org.mpris.MediaPlayer2.linux_aurora_player"))
         m_registered = bus.registerObject(kPath, this);       // adaptors are exported with it
 }
 
@@ -51,7 +51,7 @@ void MprisService::setTrack(const QString &title, const QStringList &artists, co
 
     m_metadata.clear();
     m_metadata["mpris:trackid"] = QVariant::fromValue(
-        QDBusObjectPath(QStringLiteral("/org/sonora/track/%1").arg(qHash(url.toString()))));
+        QDBusObjectPath(QStringLiteral("/org/jgu/aurora_player/track/%1").arg(qHash(url.toString()))));
     if (lengthUs > 0) m_metadata["mpris:length"] = QVariant::fromValue<qlonglong>(lengthUs);
     m_metadata["xesam:title"] = title;
     if (!artists.isEmpty()) m_metadata["xesam:artist"] = artists;

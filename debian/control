@@ -1,7 +1,7 @@
-Source: sonora
+Source: linux-aurora-player
 Section: sound
 Priority: optional
-Maintainer: Your Name <you@example.com>
+Maintainer: JGu <noreply@example.invalid>
 Build-Depends: debhelper-compat (= 13),
                cmake (>= 3.18),
                pkgconf | pkg-config,
@@ -9,12 +9,12 @@ Build-Depends: debhelper-compat (= 13),
                libgstreamer1.0-dev,
                libgstreamer-plugins-base1.0-dev
 Standards-Version: 4.6.2
-Homepage: https://github.com/przemyslawguza/sonora
-Vcs-Browser: https://github.com/przemyslawguza/sonora
-Vcs-Git: https://github.com/przemyslawguza/sonora.git
+Homepage: https://github.com/jgu-linux-apps/linux-aurora-player
+Vcs-Browser: https://github.com/jgu-linux-apps/linux-aurora-player
+Vcs-Git: https://github.com/jgu-linux-apps/linux-aurora-player.git
 Rules-Requires-Root: no
 
-Package: sonora
+Package: linux-aurora-player
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
          gstreamer1.0-plugins-base,
@@ -27,7 +27,7 @@ Recommends: gstreamer1.0-plugins-ugly,
             gstreamer1.0-pipewire,
             qt6-wayland
 Description: audio player with playlists, CUE sheets, LED meters and spectrum analyser
- Sonora is an Audacious-style audio player built with Qt 6 and GStreamer.
+ Linux Aurora Player (a fork of Sonora) is an Audacious-style audio player built with Qt 6 and GStreamer.
  Features: any number of playlists with artist/album/year/time/type columns
  and metadata tooltips, per-playlist filter, CUE sheet support (cue + FLAC
  and other images), playlist import/export (M3U, PLS, XSPF), LED level

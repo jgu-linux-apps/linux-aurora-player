@@ -1,8 +1,11 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: sonora
+Upstream-Name: linux-aurora-player
+Source: https://github.com/jgu-linux-apps/linux-aurora-player
+Comment: Fork of Sonora (https://github.com/przemyslawguza/sonora).
 
 Files: *
-Copyright: 2026 Your Name <you@example.com>
+Copyright: 2026 Przemysław Guza (original Sonora)
+           2026 JGu (Linux Aurora Player modifications)
 License: GPL-3+
 
 License: GPL-3+

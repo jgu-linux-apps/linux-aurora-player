@@ -1,0 +1,7 @@
+build/
+obj-*/
+debian/.debhelper/
+debian/linux-aurora-player/
+debian/files
+debian/*.substvars
+debian/debhelper-build-stamp

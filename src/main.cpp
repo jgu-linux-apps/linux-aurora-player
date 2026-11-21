@@ -10,9 +10,9 @@ int main(int argc, char **argv)
 {
     QElapsedTimer clock;
     clock.start();
-    const bool profile = qEnvironmentVariableIsSet("SONORA_PROFILE");     // SONORA_PROFILE=1 sonora
+    const bool profile = qEnvironmentVariableIsSet("AURORA_PROFILE");     // AURORA_PROFILE=1 linux-aurora-player
     auto mark = [&](const char *what) {
-        if (profile) std::fprintf(stderr, "[sonora] %6lld ms  %s\n", (long long)clock.elapsed(), what);
+        if (profile) std::fprintf(stderr, "[aurora-player] %6lld ms  %s\n", (long long)clock.elapsed(), what);
     };
 
     // GStreamer's registry/plugin initialisation runs in parallel with building the window.
@@ -20,10 +20,10 @@ int main(int argc, char **argv)
     std::thread gstInit([] { gst_init(nullptr, nullptr); });
 
     QApplication app(argc, argv);
-    QApplication::setApplicationName("sonora");
-    QApplication::setApplicationDisplayName("Sonora");
-    QApplication::setOrganizationName("sonora");
-    QApplication::setApplicationVersion(SONORA_VERSION);
+    QApplication::setApplicationName("linux-aurora-player");
+    QApplication::setApplicationDisplayName("Linux Aurora Player");
+    QApplication::setOrganizationName("linux-aurora-player");
+    QApplication::setApplicationVersion(APP_VERSION);
     mark("Qt ready");
 
     MainWindow w;

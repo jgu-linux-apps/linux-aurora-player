@@ -1,10 +1,14 @@
-# Sonora
+# Linux Aurora Player
 
 An Audacious-style audio player for Linux, built with Qt 6 and GStreamer (C++17).
 Multiple playlists, CUE sheets, LED level meters with true-peak detection, a spectrum analyser, a selectable
 sound service, and media-key support.
 
-Homepage: <https://github.com/przemyslawguza/sonora> - License: GPL-3.0-or-later (see `COPYING`).
+Homepage: <https://github.com/jgu-linux-apps/linux-aurora-player> - License: GPL-3.0-or-later (see `COPYING`).
+
+> **Fork of Sonora.** Linux Aurora Player is a fork of [Sonora](https://github.com/przemyslawguza/sonora) by
+> Przemysław Guza, part of the JGu Linux Apps series. Features are unchanged; the fork focuses on a modernised
+> interface, a tray icon and the Aurora light/dark theme. Full credit for the player itself goes to the original author.
 
 ## Features
 
@@ -27,7 +31,7 @@ Homepage: <https://github.com/przemyslawguza/sonora> - License: GPL-3.0-or-later
   match, Esc clears.
 * Metadata tooltip on hover: artist, album, year, track/disc, genre, composer, length, codec, bitrate, sample rate,
   channels/bit depth, file size, path, comment. Tags are read in a background thread and cached on disk.
-* Add Files / Folder (recursive) / URL, drag & drop, `sonora file-or-folder ...` on the command line.
+* Add Files / Folder (recursive) / URL, drag & drop, `linux-aurora-player file-or-folder ...` on the command line.
 * Import M3U / M3U8 / PLS (as new playlists or into the current one; relative paths are resolved).
 * Export M3U8 (UTF-8), PLS or XSPF: whole playlist, only the entries shown, only the selected ones, or all playlists
   into a folder; absolute or relative paths; optional track information.
@@ -89,7 +93,7 @@ All defaults live in `src/Config.h`; `load()` falls back to them and the Prefere
 | Level meters | -60 ... +1 dB, 0.33 dB per LED (about 186 LEDs), 10 px per channel, true-peak on |
 | Meter / spectrum fine-tuning | 0 ms |
 
-Saved settings override defaults: delete `~/.config/sonora/` to see new defaults.
+Saved settings override defaults: delete `~/.config/linux-aurora-player/` to see new defaults.
 
 ## Build
 
@@ -98,11 +102,11 @@ elements), CMake >= 3.18, a C++17 compiler. The packages are built and targeted 
 older distributions (e.g. Debian 12 with Qt 6.4) are not tested.
 
     sudo apt install build-essential debhelper cmake pkgconf qt6-base-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
-    cmake -S . -B build && cmake --build build -j && ./build/sonora
+    cmake -S . -B build && cmake --build build -j && ./build/linux-aurora-player
 
 ## Debian package (Debian 13 "trixie", Ubuntu 26.04 LTS)
 
-    ./build-deb.sh            # -> ../sonora_1.0.0_<arch>.deb
+    ./build-deb.sh            # -> ../linux-aurora-player_0.1.0_<arch>.deb
 
 There is no architecture-specific code: run the same command on an amd64 or arm64 machine / chroot / container
 (`sbuild`, `pbuilder`, or a Docker `arm64v8/debian:trixie` container with QEMU). Cross-compiling with `dpkg-buildpackage -aarm64`
@@ -113,9 +117,9 @@ together with the ALSA, PulseAudio and PipeWire sinks.
 
 ## Troubleshooting
 
-* `SONORA_DEBUG=1 sonora` prints player events (open, pre-roll, seek, EOS, errors) - useful when something does not
+* `AURORA_DEBUG=1 linux-aurora-player` prints player events (open, pre-roll, seek, EOS, errors) - useful when something does not
   play.
-* `SONORA_PROFILE=1 sonora` prints start-up timings.
+* `AURORA_PROFILE=1 linux-aurora-player` prints start-up timings.
 
 ## Known limitations
 

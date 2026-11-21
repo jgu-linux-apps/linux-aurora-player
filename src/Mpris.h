@@ -67,8 +67,8 @@ public:
     explicit MprisRootAdaptor(MprisService *s) : QDBusAbstractAdaptor(s) {}
     bool yes() const { return true; }
     bool no() const { return false; }
-    QString identity() const { return QStringLiteral("Sonora"); }
-    QString desktopEntry() const { return QStringLiteral("sonora"); }
+    QString identity() const { return QStringLiteral("Linux Aurora Player"); }
+    QString desktopEntry() const { return QStringLiteral("linux-aurora-player"); }
     QStringList schemes() const { return {"file", "http", "https"}; }
     QStringList mimeTypes() const {
         return {"audio/mpeg", "audio/flac", "audio/ogg", "audio/x-wav", "audio/mp4", "audio/aac", "audio/opus"};

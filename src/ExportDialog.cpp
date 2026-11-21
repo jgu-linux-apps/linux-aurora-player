@@ -37,7 +37,7 @@ ExportDialog::ExportDialog(const QString &name, int total, int shown, int select
     m_info = new QCheckBox(tr("Include track information (artist, title, length)"));
     m_cue = new QCheckBox(tr("Write a cue sheet as one entry (readable by other players)"));
     m_cue->setToolTip(tr("On: one line pointing to the .cue file.\n"
-                         "Off: one \"file.cue#N\" line per track - only Sonora understands that."));
+                         "Off: one \"file.cue#N\" line per track - only Linux Aurora Player and Sonora understand that."));
 
     // remembered choices
     QSettings s;

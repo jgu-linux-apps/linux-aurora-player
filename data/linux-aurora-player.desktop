@@ -1,10 +1,10 @@
 [Desktop Entry]
 Type=Application
-Name=Sonora
+Name=Linux Aurora Player
 GenericName=Audio Player
 Comment=Audio player with playlists, CUE sheets, level meters and spectrum analyser
-Exec=sonora %F
-Icon=sonora
+Exec=linux-aurora-player %F
+Icon=linux-aurora-player
 Terminal=false
 Categories=AudioVideo;Audio;Player;Qt;
 MimeType=audio/mpeg;audio/flac;audio/x-flac;audio/ogg;audio/x-wav;audio/mp4;audio/aac;audio/x-vorbis+ogg;audio/opus;audio/x-opus+ogg;application/x-cue;audio/x-mpegurl;audio/x-scpls;application/xspf+xml;

@@ -4,8 +4,8 @@
 #include <cmath>
 
 namespace {
-const bool kDebug = qEnvironmentVariableIsSet("SONORA_DEBUG");     // SONORA_DEBUG=1 sonora
-#define DBG(...) do { if (kDebug) qInfo().noquote() << "[sonora/player]" << __VA_ARGS__; } while (0)
+const bool kDebug = qEnvironmentVariableIsSet("AURORA_DEBUG");     // AURORA_DEBUG=1 linux-aurora-player
+#define DBG(...) do { if (kDebug) qInfo().noquote() << "[aurora-player/player]" << __VA_ARGS__; } while (0)
 
 QVector<double> readDbArray(const GstStructure *s, const char *name)
 {

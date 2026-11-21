@@ -1,3 +1,11 @@
+linux-aurora-player (0.1.0) unstable; urgency=medium
+
+  * Fork of Sonora 1.0.0 as Linux Aurora Player (JGu Linux Apps series).
+  * Renamed binary, package, desktop file, icon, MPRIS service and config
+    directory so it installs alongside Sonora. No functional changes.
+
+ -- JGu <noreply@example.invalid>  Sat, 21 Nov 2026 10:34:35 +0100
+
 sonora (1.0.0) unstable; urgency=medium
 
   * First stable release.

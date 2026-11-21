@@ -175,7 +175,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 // ================================================================== UI
 void MainWindow::buildUi()
 {
-    setWindowTitle("Sonora");
+    setWindowTitle("Linux Aurora Player");
     resize(1180, 700);
 
     auto act = [this](QMenu *m, const QString &text, const QKeySequence &ks, auto slot) {
@@ -944,7 +944,7 @@ void MainWindow::updateNowPlaying()
 {
     if (!m_mpris) return;
     if (!m_playing || m_player->state() == Player::Stopped || m_playing->model()->current() < 0) {
-        setWindowTitle("Sonora");
+        setWindowTitle("Linux Aurora Player");
         m_mpris->clearTrack();
         return;
     }
@@ -952,7 +952,7 @@ void MainWindow::updateNowPlaying()
     const int row = m->current();
     const TrackInfo ti = m->infoAt(row);
     const QString title = m->titleAt(row);
-    setWindowTitle((ti.artist.isEmpty() ? title : ti.artist + QStringLiteral(" – ") + title) + " — Sonora");
+    setWindowTitle((ti.artist.isEmpty() ? title : ti.artist + QStringLiteral(" – ") + title) + " — Linux Aurora Player");
     m_mpris->setTrack(title, ti.artist.isEmpty() ? QStringList() : QStringList{ti.artist}, ti.album,
                       m->urlAt(row), ti.durationMs > 0 ? ti.durationMs * 1000 : 0, ti.track);
 }
@@ -1155,8 +1155,8 @@ void MainWindow::dropEvent(QDropEvent *e)
 
 void MainWindow::about()
 {
-    QMessageBox::about(this, tr("About Sonora"),
-        tr("<b>Sonora %1</b><br>An Audacious-style player: multiple playlists with metadata columns, "
+    QMessageBox::about(this, tr("About Linux Aurora Player"),
+        tr("<b>Linux Aurora Player %1</b><br>A fork of Sonora by Przemysław Guza (GPL-3.0+).<br>An Audacious-style player: multiple playlists with metadata columns, "
            "LED level meters, spectrum analyser, selectable sound service, dark mode and media-key "
            "support.<br>Qt 6 + GStreamer.").arg(QApplication::applicationVersion()));
 }
