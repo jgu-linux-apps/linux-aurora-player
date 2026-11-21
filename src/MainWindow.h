@@ -67,6 +67,7 @@ private slots:
     void refreshManager();
     void playPlaylistAt(int index);
     void about();
+    void quitApp();
 
 private:
     void buildUi();
@@ -115,6 +116,8 @@ private:
     QLabel *m_titleIcon = nullptr, *m_plChip = nullptr;
     QMenu *m_themeMenu = nullptr;
     QLabel *m_elapsed = nullptr;
+    QAction *m_closeToTrayAct = nullptr;
+    bool m_quitting = false;
 
     QDockWidget *m_dock = nullptr;          // playlist manager
     QTreeWidget *m_mgr = nullptr;

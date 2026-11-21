@@ -1,3 +1,11 @@
+linux-aurora-player (0.3.3) unstable; urgency=medium
+
+  * Close to panel icon: the window close button hides the window and the
+    music keeps playing; on by default, View > Close to panel icon.
+    Quit (Ctrl+Q, panel menu, MPRIS) really quits.
+
+ -- JGu <noreply@example.invalid>  Sat, 21 Nov 2026 11:51:31 +0100
+
 linux-aurora-player (0.3.2) unstable; urgency=medium
 
   * Layout matches the C+ design: right column with a horizontal Level card

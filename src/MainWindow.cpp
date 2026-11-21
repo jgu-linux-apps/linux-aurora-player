@@ -208,7 +208,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(m_mpris, &MprisService::raiseRequested, this, [this] {
         showNormal(); raise(); activateWindow();
     });
-    connect(m_mpris, &MprisService::quitRequested, this, &QWidget::close);
+    connect(m_mpris, &MprisService::quitRequested, this, &MainWindow::quitApp);
 
     // ---- panel (tray) icon
     m_tray = new TrayIcon(this);
@@ -220,7 +220,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(m_tray, &TrayIcon::previousRequested, this, [this] { step(-1); });
     connect(m_tray, &TrayIcon::nextRequested, this, [this] { step(+1); });
     connect(m_tray, &TrayIcon::stopRequested, this, &MainWindow::stopPlayback);
-    connect(m_tray, &TrayIcon::quitRequested, this, [this] { close(); QApplication::quit(); });
+    connect(m_tray, &TrayIcon::quitRequested, this, &MainWindow::quitApp);
+    m_closeToTrayAct->setEnabled(m_tray->isAvailable());
 
     auto *tick = new QTimer(this);
     connect(tick, &QTimer::timeout, this, &MainWindow::onTick);
@@ -234,6 +235,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     m_shuffle->setChecked(s.value("shuffle", false).toBool());
     m_spectrumAct->setChecked(s.value("spectrum", true).toBool());      // visible by default
     m_remainAct->setChecked(s.value("remaining", false).toBool());
+    m_closeToTrayAct->setChecked(s.value("closeToTray", true).toBool());
     m_theme = s.value("theme", s.value("darkMode", false).toBool() ? "classic-dark" : "aurora").toString();
     for (QAction *a : m_themeGroup->actions())
         if (a->data().toString() == m_theme) a->setChecked(true);
@@ -278,7 +280,7 @@ void MainWindow::buildUi()
     fileMenu->addSeparator();
     act(fileMenu, tr("&Preferences…"), QKeySequence("Ctrl+P"), &MainWindow::showPreferences);
     fileMenu->addSeparator();
-    act(fileMenu, tr("&Quit"), QKeySequence::Quit, [] { QApplication::quit(); });
+    act(fileMenu, tr("&Quit"), QKeySequence::Quit, [this] { quitApp(); });
 
     // ---- Playlist
     auto *plMenu = menuBar()->addMenu(tr("&Playlist"));
@@ -319,6 +321,8 @@ void MainWindow::buildUi()
     m_spectrumAct->setChecked(true);
     m_remainAct = m_viewMenu->addAction(tr("Show &remaining time"));
     m_remainAct->setCheckable(true);
+    m_closeToTrayAct = m_viewMenu->addAction(tr("&Close to panel icon (keep playing)"));
+    m_closeToTrayAct->setCheckable(true);
     auto *themeMenu = m_viewMenu->addMenu(tr("&Theme"));
     m_themeMenu = themeMenu;
     m_themeGroup = new QActionGroup(this);
@@ -1576,8 +1580,22 @@ void MainWindow::playPlaylistAt(int index)
 }
 
 // ================================================================== misc
+void MainWindow::quitApp()
+{
+    m_quitting = true;
+    close();
+    QApplication::quit();
+}
+
 void MainWindow::closeEvent(QCloseEvent *e)
 {
+    // window close button: keep running in the panel (tray) when that is on; Quit really quits
+    if (!m_quitting && m_closeToTrayAct->isChecked() && m_tray && m_tray->isAvailable()) {
+        QSettings().setValue("closeToTray", true);
+        hide();
+        e->ignore();
+        return;
+    }
     QSettings s;
     s.setValue("geometry", saveGeometry());
     s.setValue("windowState", saveState());
@@ -1586,6 +1604,7 @@ void MainWindow::closeEvent(QCloseEvent *e)
     s.setValue("shuffle", m_shuffle->isChecked());
     s.setValue("spectrum", m_spectrumAct->isChecked());
     s.setValue("remaining", m_remainAct->isChecked());
+    s.setValue("closeToTray", m_closeToTrayAct->isChecked());
     s.setValue("theme", m_theme);
     s.setValue("playlistVisible", m_playlistAct->isChecked());
     s.setValue("splitter", m_split->saveState());
