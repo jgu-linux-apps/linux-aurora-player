@@ -32,10 +32,11 @@ int main(int argc, char **argv)
     QGuiApplication::setDesktopFileName(QStringLiteral("linux-aurora-player"));   // dock icon on Wayland
     {   // language: built-in Polish texts + Qt's own translations (dialog buttons) when installed
         QSettings s;
-        if (usePolish(s.value("general/language", "auto").toString())) {
+        const bool polish = usePolish(s.value("general/language", "auto").toString());
+        static AppTranslator app(polish);
+        QCoreApplication::installTranslator(&app);
+        if (polish) {
             QLocale::setDefault(QLocale(QLocale::Polish, QLocale::Poland));
-            static AppTranslator app;
-            QCoreApplication::installTranslator(&app);
             static QTranslator qt;
             if (qt.load(QStringLiteral("qtbase_pl"), QLibraryInfo::path(QLibraryInfo::TranslationsPath)))
                 QCoreApplication::installTranslator(&qt);

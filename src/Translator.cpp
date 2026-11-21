@@ -18,6 +18,13 @@ QString pl(int n, const char *one, const char *few, const char *many)
 QString AppTranslator::translate(const char *, const char *sourceText, const char *, int n) const
 {
     const QString src = QString::fromUtf8(sourceText);
+    if (!m_polish) {                      // English: only resolve the "(s)" plurals
+        if (src == QStringLiteral("%1 · %n track(s)"))
+            return n == 1 ? QStringLiteral("%1 · %n track") : QStringLiteral("%1 · %n tracks");
+        if (src == QLatin1String("%n playlist(s), %1 entries"))
+            return n == 1 ? QStringLiteral("%n playlist, %1 entries") : QStringLiteral("%n playlists, %1 entries");
+        return {};
+    }
     if (src == QStringLiteral("%1 · %n track(s)"))
         return QStringLiteral("%1 · %n ") + pl(n, "utwór", "utwory", "utworów");
     if (src == QLatin1String("%n playlist(s), %1 entries"))
