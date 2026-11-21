@@ -40,6 +40,7 @@ protected:
     void dragEnterEvent(QDragEnterEvent *e) override;
     void dropEvent(QDropEvent *e) override;
     void changeEvent(QEvent *e) override;
+    bool eventFilter(QObject *obj, QEvent *e) override;
 
 private slots:
     void addFiles();
@@ -111,6 +112,8 @@ private:
     std::array<QLabel *, 3> m_chips{};
     QListWidget *m_upNext = nullptr;
     TrayIcon *m_tray = nullptr;
+    QLabel *m_titleIcon = nullptr, *m_plChip = nullptr;
+    QMenu *m_themeMenu = nullptr;
 
     QDockWidget *m_dock = nullptr;          // playlist manager
     QTreeWidget *m_mgr = nullptr;

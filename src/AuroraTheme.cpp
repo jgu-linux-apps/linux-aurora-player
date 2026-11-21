@@ -49,6 +49,13 @@ QString styleSheet(bool dark)
     auto n = [](const QColor &x) { return x.name(); };
     QString s = QStringLiteral(R"(
 QMainWindow, QMenuBar { background: %1; }
+QFrame#titleBar { background: %1; border-bottom: 1px solid %3; }
+QLabel#titleText { font-weight: 600; font-size: 11pt; }
+QToolButton#barBtn { border: none; border-radius: 15px; min-width: 30px; min-height: 30px; font-size: 13pt; }
+QToolButton#barBtn::menu-indicator { image: none; width: 0; }
+QToolButton#barBtn:hover, QToolButton#winBtn:hover { background: %12; }
+QToolButton#winBtn, QToolButton#winClose { border: none; border-radius: 13px; min-width: 26px; min-height: 26px; background: %12; }
+QToolButton#winClose:hover { background: #e5484d; color: white; }
 QFrame#card { background: %2; border: 1px solid %3; border-radius: 14px; }
 QFrame#hero { background: %4; border: none; border-radius: 18px; }
 QLabel#heroKicker { color: %5; font-size: 9pt; }

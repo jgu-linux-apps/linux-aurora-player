@@ -24,6 +24,7 @@ int main(int argc, char **argv)
     QApplication::setApplicationDisplayName("Linux Aurora Player");
     QApplication::setOrganizationName("linux-aurora-player");
     QApplication::setApplicationVersion(APP_VERSION);
+    QGuiApplication::setDesktopFileName(QStringLiteral("linux-aurora-player"));   // dock icon on Wayland
     mark("Qt ready");
 
     MainWindow w;

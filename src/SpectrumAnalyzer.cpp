@@ -117,7 +117,18 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
 
     const QRect plot(4, 4, width() - 8, height() - 8 - 14);
     if (plot.width() < 40 || plot.height() < 20) return;
-    p.fillRect(plot, QColor(25, 25, 25));
+    // Aurora look (dynamic property "aurora"): plot in the view colour, violet -> cyan bars
+    const bool aurora = property("aurora").toBool();
+    const QPalette &pal = palette();
+    if (aurora) {
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setPen(Qt::NoPen);
+        p.setBrush(pal.color(QPalette::Base));
+        p.drawRoundedRect(QRectF(plot).adjusted(-2, -2, 2, 2), 10, 10);
+        p.setRenderHint(QPainter::Antialiasing, false);
+    } else {
+        p.fillRect(plot, QColor(25, 25, 25));
+    }
 
     const double floorDb = m_cfg.floorDb, ceilDb = m_cfg.ceilDb;
     auto yOf = [&](double db) {
@@ -135,7 +146,8 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
     f.setPointSizeF(std::max(6.0, f.pointSizeF() - 1.5));
     p.setFont(f);
     const QColor txt = palette().color(QPalette::WindowText);
-    const QColor grid(255, 255, 255, 28);
+    QColor grid(255, 255, 255, 28);
+    if (aurora) { grid = txt; grid.setAlpha(22); }
 
     std::vector<double> marks;
     if (m_cfg.logScale) {
@@ -166,6 +178,12 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
     g.setColorAt(0.6, QColor(0, 200, 70));
     g.setColorAt(0.85, QColor(230, 210, 0));
     g.setColorAt(1.0, QColor(230, 40, 30));
+    if (aurora) {
+        g = QLinearGradient(0, plot.bottom() + 1, 0, plot.top());
+        g.setColorAt(0.0, pal.color(QPalette::Highlight));
+        g.setColorAt(1.0, pal.color(QPalette::Link));
+    }
+    const QColor capColor = aurora ? pal.color(QPalette::Link) : QColor(255, 255, 255);
     const QBrush brush(g);
 
     const int bars = int(m_bar.size());
@@ -179,6 +197,6 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
             p.fillRect(QRect(x0, y, bw, plot.bottom() + 1 - y), brush);
         }
         if (m_peak[k] > floorDb + 0.5)
-            p.fillRect(QRect(x0, yOf(m_peak[k]), bw, 2), QColor(255, 255, 255));
+            p.fillRect(QRect(x0, yOf(m_peak[k]), bw, 2), capColor);
     }
 }

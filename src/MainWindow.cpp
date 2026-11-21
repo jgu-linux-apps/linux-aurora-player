@@ -16,6 +16,9 @@
 #include "VizDelay.h"
 
 #include <QAction>
+#include <QMouseEvent>
+#include <QWindow>
+#include <functional>
 #include <QActionGroup>
 #include <QFrame>
 #include <QGridLayout>
@@ -97,6 +100,20 @@ protected:
         p.setBrush(dark ? QColor("#151827") : c.acc);
         p.drawEllipse(m, 5, 5);
     }
+};
+
+// Own title bar (Aurora): drag to move, double-click to maximise. Styled through the style sheet.
+class TitleBar : public QFrame
+{
+public:
+    using QFrame::QFrame;
+    std::function<void()> onDoubleClick;
+protected:
+    void mousePressEvent(QMouseEvent *e) override
+    {
+        if (e->button() == Qt::LeftButton && window()->windowHandle()) window()->windowHandle()->startSystemMove();
+    }
+    void mouseDoubleClickEvent(QMouseEvent *) override { if (onDoubleClick) onDoubleClick(); }
 };
 
 QPalette darkPalette()
@@ -210,7 +227,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     tick->start(200);
 
     restoreGeometry(s.value("geometry").toByteArray());
-    restoreState(s.value("windowState").toByteArray());
+    if (!restoreState(s.value("windowState").toByteArray()) && m_dock)
+        m_dock->hide();                                           // C+ layout: manager off by default
     m_vol->setValue(s.value("volume", 80).toInt());
     m_repeat->setChecked(s.value("repeat", false).toBool());
     m_shuffle->setChecked(s.value("shuffle", false).toBool());
@@ -302,6 +320,7 @@ void MainWindow::buildUi()
     m_remainAct = m_viewMenu->addAction(tr("Show &remaining time"));
     m_remainAct->setCheckable(true);
     auto *themeMenu = m_viewMenu->addMenu(tr("&Theme"));
+    m_themeMenu = themeMenu;
     m_themeGroup = new QActionGroup(this);
     const QList<QPair<QString, QString>> themes = {
         {"aurora", tr("Aurora (follows system)")}, {"aurora-light", tr("Aurora light")},
@@ -560,17 +579,108 @@ void MainWindow::buildUi()
     m_split->setStretchFactor(0, 0);
     m_split->setStretchFactor(1, 1);
 
-    auto *central = new QWidget;
-    auto *lay = new QVBoxLayout(central);
-    lay->setContentsMargins(16, 10, 16, 8);
-    lay->addWidget(m_split);
-    setCentralWidget(central);
-
     m_outputLabel = new QLabel;
     statusBar()->addPermanentWidget(m_outputLabel);
 
     buildManager();
+
+    // ---- own title bar: app icon, name, playlist chip, playlist / theme / menu buttons, window buttons.
+    // The classic menu bar is hidden; its actions are added to the window so all shortcuts keep working.
+    setWindowFlag(Qt::FramelessWindowHint);
+    menuBar()->hide();
+    auto *mainMenu = new QMenu(this);
+    for (QAction *m : menuBar()->actions()) {
+        mainMenu->addAction(m);
+        if (m->menu()) addActions(m->menu()->actions());
+    }
+    auto *bar = new TitleBar;
+    bar->setObjectName("titleBar");
+    bar->onDoubleClick = [this] { isMaximized() ? showNormal() : showMaximized(); };
+    auto *barLay = new QHBoxLayout(bar);
+    barLay->setContentsMargins(14, 8, 10, 8);
+    barLay->setSpacing(8);
+    m_titleIcon = new QLabel;
+    m_titleIcon->setFixedSize(24, 24);
+    auto *titleText = new QLabel(QStringLiteral("Linux Aurora Player"));
+    titleText->setObjectName("titleText");
+    m_plChip = new QLabel;
+    m_plChip->setObjectName("chip");
+    auto mkBarBtn = [](const QString &text, const QString &tip, const char *name = "barBtn") {
+        auto *b = new QToolButton;
+        b->setObjectName(name);
+        b->setText(text);
+        b->setToolTip(tip);
+        b->setFocusPolicy(Qt::NoFocus);
+        b->setCursor(Qt::PointingHandCursor);
+        b->setAutoRaise(true);
+        return b;
+    };
+    auto *plBtn = mkBarBtn(QStringLiteral("☰"), tr("Show / hide playlist (Ctrl+L)"));
+    connect(plBtn, &QToolButton::clicked, m_playlistAct, &QAction::toggle);
+    auto *themeBtn = mkBarBtn(QStringLiteral("◐"), tr("Theme"));
+    themeBtn->setMenu(m_themeMenu);
+    themeBtn->setPopupMode(QToolButton::InstantPopup);
+    auto *menuBtn = mkBarBtn(QStringLiteral("⋮"), tr("Menu"));
+    menuBtn->setMenu(mainMenu);
+    menuBtn->setPopupMode(QToolButton::InstantPopup);
+    auto *minBtn = mkBarBtn(QStringLiteral("–"), tr("Minimise"), "winBtn");
+    auto *maxBtn = mkBarBtn(QStringLiteral("□"), tr("Maximise"), "winBtn");
+    auto *closeBtn = mkBarBtn(QStringLiteral("✕"), tr("Close"), "winClose");
+    connect(minBtn, &QToolButton::clicked, this, &QWidget::showMinimized);
+    connect(maxBtn, &QToolButton::clicked, this, [this] { isMaximized() ? showNormal() : showMaximized(); });
+    connect(closeBtn, &QToolButton::clicked, this, &QWidget::close);
+    barLay->addWidget(m_titleIcon);
+    barLay->addWidget(titleText);
+    barLay->addStretch(1);
+    barLay->addWidget(m_plChip);
+    for (QToolButton *b : {plBtn, themeBtn, menuBtn}) barLay->addWidget(b);
+    barLay->addSpacing(10);
+    for (QToolButton *b : {minBtn, maxBtn, closeBtn}) barLay->addWidget(b);
+
+    auto *inner = new QWidget;
+    auto *lay = new QVBoxLayout(inner);
+    lay->setContentsMargins(16, 6, 16, 4);
+    lay->addWidget(m_split);
+    auto *central = new QWidget;
+    auto *outer = new QVBoxLayout(central);
+    outer->setContentsMargins(0, 0, 0, 0);
+    outer->setSpacing(0);
+    outer->addWidget(bar);
+    outer->addWidget(inner, 1);
+    setCentralWidget(central);
+    qApp->installEventFilter(this);          // resize from the window edges (frameless window)
+
     refreshIcons();
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *e)
+{
+    if ((e->type() == QEvent::MouseButtonPress || e->type() == QEvent::MouseMove) && !isMaximized()) {
+        auto *w = qobject_cast<QWidget *>(obj);
+        if (w && w->window() == this) {
+            auto *me = static_cast<QMouseEvent *>(e);
+            const QPoint p = mapFromGlobal(me->globalPosition().toPoint());
+            const int m = 6;
+            Qt::Edges edges;
+            if (p.x() <= m) edges |= Qt::LeftEdge;
+            if (p.x() >= width() - m) edges |= Qt::RightEdge;
+            if (p.y() <= m) edges |= Qt::TopEdge;
+            if (p.y() >= height() - m) edges |= Qt::BottomEdge;
+            if (e->type() == QEvent::MouseButtonPress && edges && me->button() == Qt::LeftButton && windowHandle()) {
+                windowHandle()->startSystemResize(edges);
+                return true;
+            }
+            if (e->type() == QEvent::MouseMove && me->buttons() == Qt::NoButton) {
+                const bool h = edges & (Qt::LeftEdge | Qt::RightEdge), v = edges & (Qt::TopEdge | Qt::BottomEdge);
+                const bool diag = (edges == (Qt::LeftEdge | Qt::TopEdge)) || (edges == (Qt::RightEdge | Qt::BottomEdge));
+                if (h && v) setCursor(diag ? Qt::SizeFDiagCursor : Qt::SizeBDiagCursor);
+                else if (h) setCursor(Qt::SizeHorCursor);
+                else if (v) setCursor(Qt::SizeVerCursor);
+                else unsetCursor();
+            }
+        }
+    }
+    return QMainWindow::eventFilter(obj, e);
 }
 
 void MainWindow::updateUpNext()
@@ -581,6 +691,10 @@ void MainWindow::updateUpNext()
     if (!w) return;
     PlaylistModel *m = w->model();
     auto *px = w->proxy();
+    if (m_plChip) {
+        const int i = m_tabs->indexOf(w);
+        m_plChip->setText(tr("%1 · %n track(s)", nullptr, m->rowCount()).arg(i >= 0 ? m_tabs->tabText(i).remove('&') : QString()));
+    }
     int start = 0;
     if (m->current() >= 0) {
         const QModelIndex pi = px->mapFromSource(m->index(m->current()));
@@ -678,6 +792,8 @@ void MainWindow::applyTheme()
     const QIcon appIcon(systemIsDark() ? QStringLiteral(":/icons/app-dark.svg") : QStringLiteral(":/icons/app.svg"));
     QApplication::setWindowIcon(appIcon);
     setWindowIcon(appIcon);
+    if (m_titleIcon) m_titleIcon->setPixmap(appIcon.pixmap(QSize(24, 24), devicePixelRatioF()));
+    if (m_spectrum) { m_spectrum->setProperty("aurora", m_theme != "classic-dark"); m_spectrum->update(); }
     if (m_btnPrev && m_tabs) refreshIcons();
 }
 
