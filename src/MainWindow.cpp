@@ -631,6 +631,8 @@ void MainWindow::buildUi()
         mainMenu->addAction(m);
         if (m->menu()) addActions(m->menu()->actions());
     }
+    mainMenu->addSeparator();
+    mainMenu->addAction(m_closeToTrayAct);
     auto *bar = new TitleBar;
     bar->setObjectName("titleBar");
     bar->onDoubleClick = [this] { isMaximized() ? showNormal() : showMaximized(); };
@@ -693,6 +695,12 @@ void MainWindow::buildUi()
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *e)
 {
+    if (e->type() == QEvent::Polish) {
+        if (auto *menu = qobject_cast<QMenu *>(obj)) {
+            menu->setAttribute(Qt::WA_TranslucentBackground);
+            menu->setWindowFlag(Qt::NoDropShadowWindowHint);
+        }
+    }
     if ((e->type() == QEvent::MouseButtonPress || e->type() == QEvent::MouseMove) && !isMaximized()) {
         auto *w = qobject_cast<QWidget *>(obj);
         if (w && w->window() == this) {

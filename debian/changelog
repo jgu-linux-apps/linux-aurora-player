@@ -1,3 +1,11 @@
+linux-aurora-player (0.3.4) unstable; urgency=medium
+
+  * Menus and tooltips follow the theme: rounded Aurora popups with accent
+    highlight, separators and check marks in every theme.
+  * "Close to panel icon" also directly in the ⋮ menu.
+
+ -- JGu <noreply@example.invalid>  Sat, 21 Nov 2026 11:52:55 +0100
+
 linux-aurora-player (0.3.3) unstable; urgency=medium
 
   * Close to panel icon: the window close button hides the window and the
