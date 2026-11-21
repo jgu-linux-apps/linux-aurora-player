@@ -1,3 +1,15 @@
+linux-aurora-player (0.3.2) unstable; urgency=medium
+
+  * Layout matches the C+ design: right column with a horizontal Level card
+    (L / R round LEDs, dB scale, live peak in dBTP) above the Up next card
+    (track tiles, cue sheet marker, durations, "Whole playlist" link).
+  * Spectrum as mirrored rounded Aurora bars; elapsed / total time under the
+    seek bar; five main transport buttons, Stop and Add next to the volume.
+  * Navy cover tile, compact now-playing card, playlist hidden by default,
+    smaller default window.
+
+ -- JGu <noreply@example.invalid>  Sat, 21 Nov 2026 11:48:39 +0100
+
 linux-aurora-player (0.3.1) unstable; urgency=medium
 
   * Own Aurora title bar (icon, name, playlist chip, playlist / theme / menu

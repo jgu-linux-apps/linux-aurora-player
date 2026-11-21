@@ -89,16 +89,16 @@ protected:
         g.setColorAt(1, c.acc2);
         QPainterPath path;
         path.addRoundedRect(QRectF(rect()), 16, 16);
-        p.fillPath(path, dark ? QBrush(QColor("#151827")) : QBrush(g));
+        p.fillPath(path, QColor(dark ? "#151827" : "#26215c"));
         if (dark) { p.setPen(QPen(QBrush(g), 3)); p.drawPath(path); }
         const QPointF m = QRectF(rect()).center();
+        p.setPen(QPen(QColor("#afa9ec"), 3));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(m, 34, 34);
+        p.drawEllipse(m, 20, 20);
         p.setPen(Qt::NoPen);
-        p.setBrush(QColor(255, 255, 255, dark ? 40 : 70));
-        p.drawEllipse(m, 44, 44);
-        p.setBrush(dark ? QBrush(g) : QBrush(Qt::white));
-        p.drawEllipse(m, 16, 16);
-        p.setBrush(dark ? QColor("#151827") : c.acc);
-        p.drawEllipse(m, 5, 5);
+        p.setBrush(QColor("#afa9ec"));
+        p.drawEllipse(m, 6, 6);
     }
 };
 
@@ -238,7 +238,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     for (QAction *a : m_themeGroup->actions())
         if (a->data().toString() == m_theme) a->setChecked(true);
     applyTheme();
-    m_playlistAct->setChecked(s.value("playlistVisible", true).toBool());
+    m_playlistAct->setChecked(s.value("playlistVisible", false).toBool());
     m_split->restoreState(s.value("splitter").toByteArray());
 
     m_player->setOutput(m_cfg.audio);            // only stored; applied when the first track starts
@@ -251,7 +251,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 void MainWindow::buildUi()
 {
     setWindowTitle("Linux Aurora Player");
-    resize(1180, 700);
+    resize(1000, 600);
 
     auto act = [this](QMenu *m, const QString &text, const QKeySequence &ks, auto slot) {
         QAction *a = m->addAction(text);
@@ -405,10 +405,14 @@ void MainWindow::buildUi()
     transport->addStretch(1);
     for (QToolButton *b : {m_btnShuffle, m_btnPrev, m_btnPlay, m_btnNext, m_btnRepeat})
         transport->addWidget(b);
-    transport->addSpacing(8);
-    transport->addWidget(m_btnStop);
-    transport->addWidget(m_btnOpen);
     transport->addStretch(1);
+    for (QToolButton *b : {m_btnStop, m_btnOpen}) {
+        b->setObjectName("small");
+        b->setFixedHeight(34);
+        b->setIconSize(QSize(16, 16));
+    }
+    m_btnStop->setFixedWidth(34);
+    m_btnOpen->setFixedWidth(48);
 
     auto *volRow = new QHBoxLayout;
     auto *volIcon = new QLabel(tr("Vol"));
@@ -416,6 +420,9 @@ void MainWindow::buildUi()
     volRow->addWidget(volIcon);
     volRow->addWidget(m_vol, 1);
     volRow->addWidget(volPct);
+    volRow->addSpacing(8);
+    volRow->addWidget(m_btnStop);
+    volRow->addWidget(m_btnOpen);
 
     // ---- seek bar + elapsed / remaining time (click the time to switch)
     m_seek = new QSlider(Qt::Horizontal);
@@ -425,12 +432,13 @@ void MainWindow::buildUi()
     m_timeBtn->setFocusPolicy(Qt::NoFocus);
     m_timeBtn->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     m_timeBtn->setToolTip(tr("Click to switch between elapsed and remaining time"));
-    m_timeBtn->setMinimumWidth(QFontMetrics(m_timeBtn->font()).horizontalAdvance("-00:00:00 / 00:00:00") + 16);
-    m_timeBtn->setText("0:00 / 0:00");
+    m_timeBtn->setText("0:00");
+    m_elapsed = new QLabel("0:00");
+    m_elapsed->setObjectName("muted");
     connect(m_timeBtn, &QToolButton::clicked, this, [this] { m_remainAct->toggle(); });
     connect(m_remainAct, &QAction::toggled, this, [this](bool on) {
         m_showRemaining = on;
-        if (m_player->state() == Player::Stopped) m_timeBtn->setText("0:00 / 0:00");
+        if (m_player->state() == Player::Stopped) { m_timeBtn->setText("0:00"); m_elapsed->setText("0:00"); }
         else updateTimeLabel(m_player->position(), m_player->duration());
     });
     connect(m_seek, &QSlider::sliderPressed, this, [this] { m_seeking = true; });
@@ -441,9 +449,14 @@ void MainWindow::buildUi()
         m_seeking = false;
         m_player->seek(m_seek->value());
     });
-    auto *seekRow = new QHBoxLayout;
-    seekRow->addWidget(m_seek, 1);
-    seekRow->addWidget(m_timeBtn);
+    auto *seekRow = new QVBoxLayout;
+    seekRow->setSpacing(0);
+    seekRow->addWidget(m_seek);
+    auto *timeRow = new QHBoxLayout;
+    timeRow->addWidget(m_elapsed);
+    timeRow->addStretch(1);
+    timeRow->addWidget(m_timeBtn);
+    seekRow->addLayout(timeRow);
 
     // ---- spectrum analyser (shown by default)
     m_spectrum = new SpectrumAnalyzer;
@@ -453,6 +466,7 @@ void MainWindow::buildUi()
     // ---- "now playing" hero card: cover tile, title, artist / album, format chips
     auto *hero = new QFrame;
     hero->setObjectName("hero");
+    hero->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
     auto *heroLay = new QHBoxLayout(hero);
     heroLay->setContentsMargins(18, 18, 18, 18);
     heroLay->setSpacing(18);
@@ -489,23 +503,38 @@ void MainWindow::buildUi()
     auto *leftCol = new QVBoxLayout;
     leftCol->setSpacing(12);
     leftCol->addWidget(hero);
+    m_spectrum->setMinimumHeight(70);
+    m_spectrum->setMaximumHeight(110);
     leftCol->addWidget(m_spectrum, 1);
     leftCol->addLayout(seekRow);
     leftCol->addLayout(transport);
     leftCol->addLayout(volRow);
+    leftCol->addStretch(1);
 
     // ---- "Level" card: LED ladder with true-peak
     auto *levelCard = new QFrame;
     levelCard->setObjectName("card");
     auto *levelLay = new QVBoxLayout(levelCard);
     levelLay->setContentsMargins(12, 10, 12, 12);
+    auto *levelHead = new QHBoxLayout;
     auto *levelTitle = new QLabel(tr("Level"));
     levelTitle->setObjectName("cardTitle");
     m_peakLabel = new QLabel;
-    m_peakLabel->setObjectName("muted");
-    levelLay->addWidget(levelTitle);
-    levelLay->addWidget(m_peakLabel);
-    levelLay->addWidget(m_meter, 1, Qt::AlignHCenter);
+    m_peakLabel->setObjectName("peak");
+    levelHead->addWidget(levelTitle);
+    levelHead->addStretch(1);
+    levelHead->addWidget(m_peakLabel);
+    levelLay->addLayout(levelHead);
+    m_meter->setHorizontal(true);
+    levelLay->addWidget(m_meter);
+    auto *peakTimer = new QTimer(this);
+    connect(peakTimer, &QTimer::timeout, this, [this] {
+        const double v = m_meter->peakHoldDb();
+        const QString unit = m_cfg.meter.truePeak ? QStringLiteral(" dBTP") : QStringLiteral(" dBFS");
+        m_peakLabel->setText(v <= m_cfg.meter.minDb + 0.5 ? QStringLiteral("–") + unit
+                                                          : QString::number(v, 'f', 1).replace('-', QChar(0x2212)) + unit);
+    });
+    peakTimer->start(150);
 
     // ---- "Up next" card: the following tracks of the playing playlist
     auto *nextCard = new QFrame;
@@ -518,7 +547,7 @@ void MainWindow::buildUi()
     nextTitle->setObjectName("cardTitle");
     auto *showAll = new QToolButton;
     showAll->setObjectName("link");
-    showAll->setText(tr("Playlist"));
+    showAll->setText(tr("Whole playlist"));
     showAll->setCursor(Qt::PointingHandCursor);
     showAll->setFocusPolicy(Qt::NoFocus);
     nextHead->addWidget(nextTitle);
@@ -541,9 +570,14 @@ void MainWindow::buildUi()
     auto *topLay = new QHBoxLayout(top);
     topLay->setContentsMargins(0, 0, 0, 0);
     topLay->setSpacing(14);
+    auto *rightCol = new QVBoxLayout;
+    rightCol->setSpacing(12);
+    rightCol->addWidget(levelCard);
+    rightCol->addWidget(nextCard, 1);
+    levelCard->setFixedWidth(320);
+    nextCard->setFixedWidth(320);
     topLay->addLayout(leftCol, 1);
-    topLay->addWidget(levelCard);
-    topLay->addWidget(nextCard);
+    topLay->addLayout(rightCol);
 
     // ---- playlist tabs (bottom, can be hidden: View > Playlist)
     m_tabs = new QTabWidget;
@@ -705,10 +739,29 @@ void MainWindow::updateUpNext()
         const TrackInfo ti = m->infoAt(src);
         QString text = m->titleAt(src);
         if (!ti.artist.isEmpty()) text += QStringLiteral("\n") + ti.artist;
-        auto *it = new QListWidgetItem(text);
+        auto *it = new QListWidgetItem;
         it->setData(Qt::UserRole, src);
-        if (ti.durationMs > 0) it->setToolTip(formatDuration(ti.durationMs));
+        auto *row = new QWidget;
+        auto *rl = new QHBoxLayout(row);
+        rl->setContentsMargins(4, 2, 4, 2);
+        rl->setSpacing(10);
+        const bool cue = m->urlAt(src).toString().contains(QStringLiteral(".cue#"));
+        auto *tile = new QLabel(cue ? QStringLiteral("CUE") : QStringLiteral("♪"));
+        tile->setObjectName(cue ? "tileCue" : "tile");
+        tile->setFixedSize(34, 34);
+        tile->setAlignment(Qt::AlignCenter);
+        auto *txt = new QLabel(QStringLiteral("<span>%1</span><br><span style='font-size:8.5pt'>%2</span>")
+                                   .arg(m->titleAt(src).toHtmlEscaped(),
+                                        (cue ? tr("from cue sheet") : ti.artist).toHtmlEscaped()));
+        txt->setTextFormat(Qt::RichText);
+        auto *dur = new QLabel(ti.durationMs > 0 ? formatDuration(ti.durationMs) : QString());
+        dur->setObjectName("muted");
+        rl->addWidget(tile);
+        rl->addWidget(txt, 1);
+        rl->addWidget(dur);
+        it->setSizeHint(QSize(0, 46));
         m_upNext->addItem(it);
+        m_upNext->setItemWidget(it, row);
     }
     if (m_upNext->count() == 0) {
         auto *it = new QListWidgetItem(tr("End of playlist"));
@@ -720,7 +773,6 @@ void MainWindow::updateUpNext()
 void MainWindow::updateHero()
 {
     if (!m_heroTitle) return;
-    m_peakLabel->setText(m_cfg.meter.truePeak ? tr("True-peak on") : tr("Sample peak"));
     const bool idle = !m_playing || m_player->state() == Player::Stopped || m_playing->model()->current() < 0;
     if (idle) {
         m_heroKicker->setText(tr("Stopped"));
@@ -1331,7 +1383,8 @@ void MainWindow::onStateChanged(Player::State s)
         m_meter->reset();
         m_spectrum->reset();
         m_seek->setRange(0, 0);
-        m_timeBtn->setText("0:00 / 0:00");
+        m_timeBtn->setText("0:00");
+        m_elapsed->setText("0:00");
     }
     updateNowPlaying();
 }
@@ -1359,7 +1412,11 @@ void MainWindow::updateTimeLabel(qint64 pos, qint64 dur)
     QString a = (m_showRemaining && dur > 0)
         ? QStringLiteral("-") + formatDuration(std::max<qint64>(0, dur - pos))
         : formatDuration(pos);
-    m_timeBtn->setText(dur > 0 ? a + QStringLiteral(" / ") + formatDuration(dur) : a);
+    m_elapsed->setText(formatDuration(pos));
+    m_timeBtn->setText(dur <= 0 ? QStringLiteral("--:--")
+                       : m_showRemaining ? QStringLiteral("−") + formatDuration(std::max<qint64>(0, dur - pos))
+                                         : formatDuration(dur));
+    Q_UNUSED(a);
 }
 
 void MainWindow::onTick()

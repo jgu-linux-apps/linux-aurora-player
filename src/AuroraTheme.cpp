@@ -64,10 +64,14 @@ QLabel#heroSub { color: %5; font-size: 10pt; }
 QLabel#chip { background: %7; color: %5; border-radius: 9px; padding: 2px 9px; font-size: 8.5pt; }
 QLabel#cardTitle { font-weight: 600; }
 QLabel#muted { color: %8; }
-QLabel#peak { color: #ff5c7a; font-weight: 600; }
+QLabel#peak { color: #e5484d; font-weight: 600; }
+QLabel#tile { background: %4; color: %5; border-radius: 8px; font-size: 13pt; }
+QLabel#tileCue { background: #dff5ec; color: #0f6e56; border-radius: 8px; font-size: 7.5pt; font-weight: 600; }
 QToolButton#round { background: %2; border: 1px solid %3; border-radius: 23px; }
 QToolButton#round:hover { border-color: %9; }
 QToolButton#round:checked { border: 2px solid %9; }
+QToolButton#small { background: %2; border: 1px solid %3; border-radius: 17px; }
+QToolButton#small:hover { border-color: %9; }
 QToolButton#bigPlay { background: %9; border: none; border-radius: 38px; }
 QToolButton#bigPlay:hover { background: %10; }
 QToolButton#link { color: %11; border: none; background: transparent; }

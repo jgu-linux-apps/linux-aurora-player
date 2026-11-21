@@ -69,13 +69,30 @@ int LevelMeter::ledCount() const
 
 double LevelMeter::gridBottom() const { return (topIndex() - ledCount()) * m_cfg.ledStepDb; }
 
+void LevelMeter::setHorizontal(bool on)
+{
+    m_horizontal = on;
+    setSizePolicy(on ? QSizePolicy::Expanding : QSizePolicy::Fixed, on ? QSizePolicy::Fixed : QSizePolicy::Expanding);
+    updateGeometry();
+    update();
+}
+
+double LevelMeter::peakHoldDb() const
+{
+    double m = m_cfg.minDb;
+    for (double v : m_hold) m = std::max(m, v);
+    return m;
+}
+
 QSize LevelMeter::sizeHint() const
 {
+    if (m_horizontal) return QSize(300, 22 + int(m_disp.size()) * 18);
     return QSize(scaleWidth() + int(m_disp.size()) * (m_cfg.barWidth + kGap) + 6, 260);
 }
 
 QSize LevelMeter::minimumSizeHint() const
 {
+    if (m_horizontal) return QSize(200, sizeHint().height());
     return QSize(sizeHint().width(), 240);     // keeps the (many, thin) LEDs readable
 }
 
@@ -123,6 +140,7 @@ void LevelMeter::tick()
 void LevelMeter::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
+    if (m_horizontal) { paintHorizontal(p); return; }
     p.fillRect(rect(), palette().color(QPalette::Window));
 
     const int n = int(m_disp.size());
@@ -201,5 +219,53 @@ void LevelMeter::paintEvent(QPaintEvent *)
         p.setPen(txt);
         p.drawText(QRect(x0 - 2, plot.bottom() + 4, m_cfg.barWidth + 4, 14), Qt::AlignCenter, label);
         p.setPen(Qt::NoPen);
+    }
+}
+
+// Horizontal Aurora variant: L / R rows of round LEDs (coarser step, so each LED stays readable),
+// peak-hold LED, dB scale underneath. Same levels, colours and ballistics as the vertical ladder.
+void LevelMeter::paintHorizontal(QPainter &p)
+{
+    const int n = int(m_disp.size());
+    const QColor txt = palette().color(QPalette::WindowText);
+    QColor dim = txt; dim.setAlpha(90);
+    QFont f = font();
+    f.setPointSizeF(std::max(6.5, f.pointSizeF() - 1.5));
+    p.setFont(f);
+    p.setRenderHint(QPainter::Antialiasing);
+
+    const int labelW = 16, rowH = 18;
+    const double top = gridTop(), bot = m_cfg.minDb;
+    const double step = std::max(m_cfg.ledStepDb, (top - bot) / 36.0);
+    const int nLeds = std::max(1, int(std::ceil((top - bot) / step - 1e-9)));
+    const QRectF plot(labelW, 2, width() - labelW - 2, n * rowH);
+    const double ledW = plot.width() / nLeds;
+    auto xOf = [&](double db) { return plot.left() + (std::clamp(db, bot, top) - bot) / (top - bot) * plot.width(); };
+
+    for (int i = 0; i < n; ++i) {
+        const double y = plot.top() + i * rowH;
+        const QString label = n == 1 ? QStringLiteral("M")
+                            : n == 2 ? (i == 0 ? QStringLiteral("L") : QStringLiteral("R"))
+                                     : QString::number(i + 1);
+        p.setPen(dim);
+        p.drawText(QRectF(0, y, labelW, rowH), Qt::AlignVCenter | Qt::AlignLeft, label);
+        p.setPen(Qt::NoPen);
+        for (int j = 0; j < nLeds; ++j) {
+            const double lo = bot + j * step;
+            const QColor c = ledColor(lo);
+            const bool lit = m_disp[i] > std::max(lo, m_cfg.minDb) + 1e-6;
+            const bool hold = m_hold[i] > m_cfg.minDb + 0.5 && m_hold[i] >= lo && m_hold[i] < lo + step;
+            QColor off = txt; off.setAlpha(28);
+            p.setBrush(lit ? c : hold ? c.lighter(110) : off);
+            const double d = std::min(ledW - 2.0, rowH - 6.0);
+            p.drawRoundedRect(QRectF(plot.left() + j * ledW + 1, y + (rowH - d) / 2, std::max(2.0, ledW - 2), d), d / 2.5, d / 2.5);
+        }
+    }
+    p.setPen(dim);
+    const double sy = plot.bottom() + 2;
+    for (int db : {-60, -40, -24, -12, -6, 0}) {
+        if (db < bot || db > top) continue;
+        const double x = xOf(db);
+        p.drawText(QRectF(x - 16, sy, 32, 14), Qt::AlignCenter, QString::number(db));
     }
 }

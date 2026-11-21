@@ -115,6 +115,39 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
     QPainter p(this);
     p.fillRect(rect(), palette().color(QPalette::Window));
 
+    if (property("aurora").toBool()) {
+        // Aurora look: mirrored rounded bars around the centre line (bars grouped by their maximum)
+        p.setRenderHint(QPainter::Antialiasing);
+        const QRectF area(2, 2, width() - 4, height() - 4);
+        const int src = int(m_bar.size());
+        const int groups = std::clamp(int(area.width() / 11), 8, std::max(8, src));
+        const double gw = area.width() / groups;
+        const double bw = std::max(2.0, gw * 0.62);
+        const double mid = area.center().y();
+        QLinearGradient g(0, area.top(), 0, area.bottom());
+        g.setColorAt(0.0, palette().color(QPalette::Link));
+        g.setColorAt(0.5, palette().color(QPalette::Highlight));
+        g.setColorAt(1.0, palette().color(QPalette::Link));
+        p.setPen(Qt::NoPen);
+        p.setBrush(g);
+        const double floorDb = m_cfg.floorDb, ceilDb = m_cfg.ceilDb;
+        for (int k = 0; k < groups; ++k) {
+            double v = floorDb;
+            // linear analyser axis: spread the low end (where music lives) with a power curve
+            const double c = m_cfg.logScale ? 1.0 : 2.4;
+            const int a0 = int(src * std::pow(double(k) / groups, c));
+            const int a1 = std::max(a0 + 1, int(src * std::pow(double(k + 1) / groups, c)));
+            for (int j = a0; j < a1 && j < src; ++j) v = std::max(v, m_bar[j]);
+            const double t = std::clamp((v - floorDb) / (ceilDb - floorDb), 0.0, 1.0);
+            const double h = std::max(bw, t * area.height());
+            const double x = area.left() + k * gw + (gw - bw) / 2;
+            QColor idle = palette().color(QPalette::Highlight); idle.setAlpha(45);
+            if (t <= 0.0) { p.setBrush(idle); } else { p.setBrush(g); }
+            p.drawRoundedRect(QRectF(x, mid - h / 2, bw, h), bw / 2, bw / 2);
+        }
+        return;
+    }
+
     const QRect plot(4, 4, width() - 8, height() - 8 - 14);
     if (plot.width() < 40 || plot.height() < 20) return;
     // Aurora look (dynamic property "aurora"): plot in the view colour, violet -> cyan bars

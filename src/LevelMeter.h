@@ -15,6 +15,8 @@ public:
     void setConfig(const MeterConfig &c);
     QSize sizeHint() const override;
     QSize minimumSizeHint() const override;
+    void setHorizontal(bool on);                      // Aurora card: one row of round LEDs per channel
+    double peakHoldDb() const;                        // highest peak-hold value of all channels
 
 public slots:
     void release();                                   // pause: let all LEDs and the peak-hold LED drop quickly
@@ -23,6 +25,7 @@ public slots:
 
 protected:
     void paintEvent(QPaintEvent *) override;
+    void paintHorizontal(QPainter &p);
 
 private slots:
     void tick();
@@ -42,4 +45,5 @@ private:
     QElapsedTimer m_clock;
     qint64 m_last = 0;
     bool m_released = false;
+    bool m_horizontal = false;
 };

@@ -114,6 +114,7 @@ private:
     TrayIcon *m_tray = nullptr;
     QLabel *m_titleIcon = nullptr, *m_plChip = nullptr;
     QMenu *m_themeMenu = nullptr;
+    QLabel *m_elapsed = nullptr;
 
     QDockWidget *m_dock = nullptr;          // playlist manager
     QTreeWidget *m_mgr = nullptr;
