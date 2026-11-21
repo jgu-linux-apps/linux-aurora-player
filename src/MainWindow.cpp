@@ -222,6 +222,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     connect(m_tray, &TrayIcon::stopRequested, this, &MainWindow::stopPlayback);
     connect(m_tray, &TrayIcon::quitRequested, this, &MainWindow::quitApp);
     m_closeToTrayAct->setEnabled(m_tray->isAvailable());
+    // the app ends only through quitApp() / a real close below, never because the window got hidden
+    QApplication::setQuitOnLastWindowClosed(false);
 
     auto *tick = new QTimer(this);
     connect(tick, &QTimer::timeout, this, &MainWindow::onTick);
@@ -1599,11 +1601,11 @@ void MainWindow::closeEvent(QCloseEvent *e)
 {
     // window close button: keep running in the panel (tray) when that is on; Quit really quits
     if (!m_quitting && m_closeToTrayAct->isChecked() && m_tray && m_tray->isAvailable()) {
-        QSettings().setValue("closeToTray", true);
-        hide();
         e->ignore();
+        hide();
         return;
     }
+    QTimer::singleShot(0, qApp, &QCoreApplication::quit);   // real close: end the app (no implicit quit)
     QSettings s;
     s.setValue("geometry", saveGeometry());
     s.setValue("windowState", saveState());
