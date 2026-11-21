@@ -24,6 +24,7 @@ class SpectrumAnalyzer;
 class PlaylistWidget;
 class MprisService;
 class VizDelay;
+class TrayIcon;
 
 class MainWindow : public QMainWindow
 {
@@ -109,6 +110,7 @@ private:
     QLabel *m_heroKicker = nullptr, *m_heroTitle = nullptr, *m_heroSub = nullptr, *m_peakLabel = nullptr;
     std::array<QLabel *, 3> m_chips{};
     QListWidget *m_upNext = nullptr;
+    TrayIcon *m_tray = nullptr;
 
     QDockWidget *m_dock = nullptr;          // playlist manager
     QTreeWidget *m_mgr = nullptr;

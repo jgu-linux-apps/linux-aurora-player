@@ -18,7 +18,8 @@ Package: linux-aurora-player
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
          gstreamer1.0-plugins-base,
-         gstreamer1.0-plugins-good
+         gstreamer1.0-plugins-good,
+         qt6-svg-plugins | libqt6svg6
 Recommends: gstreamer1.0-plugins-ugly,
             gstreamer1.0-plugins-bad,
             gstreamer1.0-libav,

@@ -1,0 +1,7 @@
+<RCC>
+  <qresource prefix="/icons">
+    <file alias="app.svg">icons/linux-aurora-player.svg</file>
+    <file alias="app-dark.svg">icons/linux-aurora-player-dark.svg</file>
+    <file alias="tray.svg">icons/linux-aurora-player-tray1.svg</file>
+  </qresource>
+</RCC>

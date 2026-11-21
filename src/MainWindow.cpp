@@ -12,6 +12,7 @@
 #include "PreferencesDialog.h"
 #include "SpectrumAnalyzer.h"
 #include "TransportIcons.h"
+#include "TrayIcon.h"
 #include "VizDelay.h"
 
 #include <QAction>
@@ -192,6 +193,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     });
     connect(m_mpris, &MprisService::quitRequested, this, &QWidget::close);
 
+    // ---- panel (tray) icon
+    m_tray = new TrayIcon(this);
+    connect(m_tray, &TrayIcon::toggleWindowRequested, this, [this] {
+        if (isVisible() && !isMinimized() && isActiveWindow()) hide();
+        else { showNormal(); raise(); activateWindow(); }
+    });
+    connect(m_tray, &TrayIcon::playPauseRequested, this, &MainWindow::togglePlayPause);
+    connect(m_tray, &TrayIcon::previousRequested, this, [this] { step(-1); });
+    connect(m_tray, &TrayIcon::nextRequested, this, [this] { step(+1); });
+    connect(m_tray, &TrayIcon::stopRequested, this, &MainWindow::stopPlayback);
+    connect(m_tray, &TrayIcon::quitRequested, this, [this] { close(); QApplication::quit(); });
+
     auto *tick = new QTimer(this);
     connect(tick, &QTimer::timeout, this, &MainWindow::onTick);
     tick->start(200);
@@ -304,9 +317,7 @@ void MainWindow::buildUi()
         m_theme = a->data().toString();
         applyTheme();
     });
-    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this] {
-        if (m_theme == "aurora" || m_theme == "system") applyTheme();
-    });
+    connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this] { applyTheme(); });
 
     act(menuBar()->addMenu(tr("&Help")), tr("&About"), {}, &MainWindow::about);
 
@@ -602,6 +613,7 @@ void MainWindow::updateHero()
         m_heroTitle->setText(tr("Nothing playing"));
         m_heroSub->setText(tr("Add files or pick a track from the playlist"));
         for (QLabel *c : m_chips) c->hide();
+        if (m_tray) { m_tray->setPlaying(false); m_tray->setTrack({}); }
         updateUpNext();
         return;
     }
@@ -610,6 +622,10 @@ void MainWindow::updateHero()
     const TrackInfo ti = m->infoAt(row);
     m_heroKicker->setText(m_player->state() == Player::Paused ? tr("Paused") : tr("Now playing"));
     m_heroTitle->setText(m->titleAt(row));
+    if (m_tray) {
+        m_tray->setPlaying(m_player->state() == Player::Playing);
+        m_tray->setTrack(ti.artist.isEmpty() ? m->titleAt(row) : ti.artist + QStringLiteral(" – ") + m->titleAt(row));
+    }
     QStringList sub;
     if (!ti.artist.isEmpty()) sub << ti.artist;
     if (!ti.album.isEmpty()) sub << (ti.year > 0 ? QStringLiteral("%1 (%2)").arg(ti.album).arg(ti.year) : ti.album);
@@ -658,6 +674,10 @@ void MainWindow::applyTheme()
         QApplication::setPalette(pal);
         app->setStyleSheet(Aurora::styleSheet(systemIsDark()).section("QSlider", 0, 0));
     }
+    // dock / window icon follows the system colour scheme (the shell's colours), not the app theme
+    const QIcon appIcon(systemIsDark() ? QStringLiteral(":/icons/app-dark.svg") : QStringLiteral(":/icons/app.svg"));
+    QApplication::setWindowIcon(appIcon);
+    setWindowIcon(appIcon);
     if (m_btnPrev && m_tabs) refreshIcons();
 }
 
