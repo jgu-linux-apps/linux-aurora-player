@@ -25,6 +25,7 @@ public:
 
     QString playbackStatus() const;
     QVariantMap metadata() const { return m_metadata; }
+    void setArtUrl(const QString &fileUrl);          // "" removes it
     qlonglong position() const { return qlonglong(m_player->position()) * 1000; }
     double volume() const { return m_volume; }
 

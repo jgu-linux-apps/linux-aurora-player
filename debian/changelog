@@ -1,3 +1,14 @@
+linux-aurora-player (0.6.0) unstable; urgency=medium
+
+  * Album covers: a picture next to the audio file (cover / folder / front /
+    album / AlbumArt*.jpg|png|webp) or the picture embedded in the tags
+    (ID3, FLAC, MP4), read in the background and cached in
+    ~/.cache/linux-aurora-player/covers.
+  * The cover is shown in the now-playing card, as thumbnails in Up next,
+    and passed to GNOME through MPRIS (media controls, lock screen).
+
+ -- JGu <noreply@example.invalid>  Sun, 22 Nov 2026 09:49:17 +0100
+
 linux-aurora-player (0.5.2) unstable; urgency=medium
 
   * Aurora analyser: kHz labels sit below the panel and the dB labels no

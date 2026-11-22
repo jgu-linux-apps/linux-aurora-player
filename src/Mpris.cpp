@@ -61,6 +61,14 @@ void MprisService::setTrack(const QString &title, const QStringList &artists, co
     notify(kPlayerIface, {{"Metadata", m_metadata}});
 }
 
+void MprisService::setArtUrl(const QString &fileUrl)
+{
+    if (m_metadata.value("mpris:artUrl").toString() == fileUrl) return;
+    if (fileUrl.isEmpty()) m_metadata.remove("mpris:artUrl");
+    else m_metadata["mpris:artUrl"] = fileUrl;
+    notify(kPlayerIface, {{"Metadata", m_metadata}});
+}
+
 void MprisService::clearTrack()
 {
     if (m_lastKey.isEmpty()) return;

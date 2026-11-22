@@ -13,6 +13,7 @@
 #include "SpectrumAnalyzer.h"
 #include "TransportIcons.h"
 #include "TrayIcon.h"
+#include "CoverArt.h"
 #include "VizDelay.h"
 
 #include <QAction>
@@ -48,6 +49,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QImageReader>
 #include <QProcess>
 #include <QPushButton>
 #include <QRandomGenerator>
@@ -79,11 +81,21 @@ class CoverTile : public QWidget
 {
 public:
     explicit CoverTile(QWidget *parent = nullptr) : QWidget(parent) { setFixedSize(128, 128); }
+    void setImage(const QImage &img) { m_img = img; update(); }
 protected:
     void paintEvent(QPaintEvent *) override
     {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
+        if (!m_img.isNull()) {                        // album cover, centre-cropped to a rounded square
+            p.setRenderHint(QPainter::SmoothPixmapTransform);
+            QPainterPath clip;
+            clip.addRoundedRect(QRectF(rect()), 16, 16);
+            p.setClipPath(clip);
+            const QSize s = m_img.size().scaled(size(), Qt::KeepAspectRatioByExpanding);
+            p.drawImage(QRect(QPoint((width() - s.width()) / 2, (height() - s.height()) / 2), s), m_img);
+            return;
+        }
         const bool dark = palette().color(QPalette::Window).lightness() < 128;
         const Aurora::Colors c = Aurora::colors(dark);
         QLinearGradient g(0, 0, width(), height());
@@ -102,6 +114,8 @@ protected:
         p.setBrush(QColor("#afa9ec"));
         p.drawEllipse(m, 6, 6);
     }
+private:
+    QImage m_img;
 };
 
 // Own title bar (Aurora): drag to move, double-click to maximise. Styled through the style sheet.
@@ -868,6 +882,31 @@ void MainWindow::updateUpNext()
         tile->setObjectName(cue ? "tileCue" : "tile");
         tile->setFixedSize(34, 34);
         tile->setAlignment(Qt::AlignCenter);
+        const QString pic = CoverArt::findCached(m->urlAt(src));
+        if (!pic.isEmpty()) {
+            QPixmap pm = m_thumbs.value(pic);
+            if (pm.isNull()) {
+                QImageReader r(pic);
+                r.setAutoTransform(true);
+                const qreal dpr = devicePixelRatioF();
+                const QImage img = r.read().scaled(QSize(34, 34) * dpr, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+                pm = QPixmap(QSize(34, 34) * dpr);
+                pm.fill(Qt::transparent);
+                QPainter tp(&pm);
+                tp.setRenderHint(QPainter::Antialiasing);
+                QPainterPath cl;
+                cl.addRoundedRect(QRectF(0, 0, 34 * dpr, 34 * dpr), 8 * dpr, 8 * dpr);
+                tp.setClipPath(cl);
+                tp.drawImage(QPointF((34 * dpr - img.width()) / 2, (34 * dpr - img.height()) / 2), img);
+                tp.end();
+                pm.setDevicePixelRatio(dpr);
+                if (m_thumbs.size() > 200) m_thumbs.clear();
+                m_thumbs.insert(pic, pm);
+            }
+            tile->setText(QString());
+            tile->setPixmap(pm);
+            tile->setStyleSheet(QStringLiteral("background: transparent;"));
+        }
         auto *txt = new QLabel(QStringLiteral("<span>%1</span><br><span style='font-size:8.5pt'>%2</span>")
                                    .arg(m->titleAt(src).toHtmlEscaped(),
                                         (cue ? tr("from cue sheet") : ti.artist).toHtmlEscaped()));
@@ -897,6 +936,8 @@ void MainWindow::updateHero()
         m_heroTitle->setText(tr("Nothing playing"));
         m_heroSub->setText(tr("Add files or pick a track from the playlist"));
         for (QLabel *c : m_chips) c->hide();
+        m_coverFor = QUrl();
+        static_cast<CoverTile *>(m_cover)->setImage(QImage());
         if (m_tray) { m_tray->setPlaying(false); m_tray->setTrack({}); }
         updateUpNext();
         return;
@@ -906,6 +947,20 @@ void MainWindow::updateHero()
     const TrackInfo ti = m->infoAt(row);
     m_heroKicker->setText(m_player->state() == Player::Paused ? tr("Paused") : tr("Now playing"));
     m_heroTitle->setText(m->titleAt(row));
+    const QUrl trackUrl = m->urlAt(row);
+    if (trackUrl != m_coverFor) {
+        m_coverFor = trackUrl;
+        static_cast<CoverTile *>(m_cover)->setImage(QImage());
+        if (m_mpris) m_mpris->setArtUrl({});
+        CoverArt::findAsync(trackUrl, this, [this, trackUrl](const QString &pic) {
+            if (trackUrl != m_coverFor) return;              // the track changed meanwhile
+            QImageReader r(pic);
+            r.setAutoTransform(true);
+            static_cast<CoverTile *>(m_cover)->setImage(pic.isEmpty() ? QImage() : r.read());
+            if (m_mpris) m_mpris->setArtUrl(pic.isEmpty() ? QString() : QUrl::fromLocalFile(pic).toString());
+            updateUpNext();
+        });
+    }
     if (m_tray) {
         m_tray->setPlaying(m_player->state() == Player::Playing);
         m_tray->setTrack(ti.artist.isEmpty() ? m->titleAt(row) : ti.artist + QStringLiteral(" – ") + m->titleAt(row));

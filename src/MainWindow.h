@@ -3,6 +3,9 @@
 #include <QMainWindow>
 #include <QPointer>
 #include <array>
+#include <QHash>
+#include <QPixmap>
+#include <QUrl>
 #include "Config.h"
 #include "Player.h"
 
@@ -114,6 +117,8 @@ private:
     std::array<QLabel *, 3> m_chips{};
     QListWidget *m_upNext = nullptr;
     TrayIcon *m_tray = nullptr;
+    QUrl m_coverFor;                        // track whose cover is shown / being looked up
+    QHash<QString, QPixmap> m_thumbs;       // Up next cover thumbnails
     QLabel *m_titleIcon = nullptr, *m_plChip = nullptr;
     QMenu *m_themeMenu = nullptr;
     QLabel *m_elapsed = nullptr;

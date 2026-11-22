@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.18)
-project(linux-aurora-player VERSION 0.5.2 LANGUAGES CXX)
+project(linux-aurora-player VERSION 0.6.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,6 +31,7 @@ add_executable(linux-aurora-player
   src/VizDelay.cpp         src/VizDelay.h
   src/TrayIcon.cpp         src/TrayIcon.h
   src/Translator.cpp       src/Translator.h
+  src/CoverArt.cpp         src/CoverArt.h
   src/PolishTexts.cpp
   src/TrackInfo.h          src/TransportIcons.h
   data/icons.qrc)
