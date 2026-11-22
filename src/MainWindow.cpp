@@ -26,6 +26,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QSplitter>
+#include <QStackedWidget>
 #include <QStyleHints>
 #include <QApplication>
 #include <QCollator>
@@ -331,7 +332,7 @@ void MainWindow::buildUi()
     m_themeGroup = new QActionGroup(this);
     const QList<QPair<QString, QString>> themes = {
         {"aurora", tr("Aurora (follows system)")}, {"aurora-light", tr("Aurora light")},
-        {"aurora-dark", tr("Aurora dark")}, {"system", tr("System")}, {"classic-dark", tr("Classic dark")}};
+        {"aurora-dark", tr("Aurora dark")}, {"system", tr("System")}, {"sonora", tr("Sonora")}, {"classic-dark", tr("Sonora dark")}};
     for (const auto &t : themes) {
         QAction *a = themeMenu->addAction(t.second);
         a->setCheckable(true);
@@ -425,7 +426,8 @@ void MainWindow::buildUi()
     auto *volIcon = new QLabel(tr("Vol"));
     volIcon->setObjectName("muted");
     volRow->addWidget(volIcon);
-    volRow->addWidget(m_vol, 1);
+    m_aVol = new QWidget; { auto *l = new QVBoxLayout(m_aVol); l->setContentsMargins(0, 0, 0, 0); l->addWidget(m_vol); }
+    volRow->addWidget(m_aVol, 1);
     volRow->addWidget(volPct);
     volRow->addSpacing(8);
     volRow->addWidget(m_btnStop);
@@ -458,11 +460,13 @@ void MainWindow::buildUi()
     });
     auto *seekRow = new QVBoxLayout;
     seekRow->setSpacing(0);
-    seekRow->addWidget(m_seek);
+    m_aSeek = new QWidget; { auto *l = new QVBoxLayout(m_aSeek); l->setContentsMargins(0, 0, 0, 0); l->addWidget(m_seek); }
+    seekRow->addWidget(m_aSeek);
     auto *timeRow = new QHBoxLayout;
     timeRow->addWidget(m_elapsed);
     timeRow->addStretch(1);
-    timeRow->addWidget(m_timeBtn);
+    m_aTime = new QWidget; { auto *l = new QVBoxLayout(m_aTime); l->setContentsMargins(0, 0, 0, 0); l->addWidget(m_timeBtn); }
+    timeRow->addWidget(m_aTime);
     seekRow->addLayout(timeRow);
 
     // ---- spectrum analyser (shown by default)
@@ -510,9 +514,10 @@ void MainWindow::buildUi()
     auto *leftCol = new QVBoxLayout;
     leftCol->setSpacing(12);
     leftCol->addWidget(hero);
-    m_spectrum->setMinimumHeight(70);
-    m_spectrum->setMaximumHeight(110);
-    leftCol->addWidget(m_spectrum, 1);
+    m_aSpec = new QWidget; { auto *l = new QVBoxLayout(m_aSpec); l->setContentsMargins(0, 0, 0, 0); l->addWidget(m_spectrum); }
+    m_aSpec->setMinimumHeight(130);
+    m_aSpec->setMaximumHeight(190);
+    leftCol->addWidget(m_aSpec, 1);
     leftCol->addLayout(seekRow);
     leftCol->addLayout(transport);
     leftCol->addLayout(volRow);
@@ -533,7 +538,8 @@ void MainWindow::buildUi()
     levelHead->addWidget(m_peakLabel);
     levelLay->addLayout(levelHead);
     m_meter->setHorizontal(true);
-    levelLay->addWidget(m_meter);
+    m_aMeter = new QWidget; { auto *l = new QVBoxLayout(m_aMeter); l->setContentsMargins(0, 0, 0, 0); l->addWidget(m_meter); }
+    levelLay->addWidget(m_aMeter);
     auto *peakTimer = new QTimer(this);
     connect(peakTimer, &QTimer::timeout, this, [this] {
         const double v = m_meter->peakHoldDb();
@@ -609,14 +615,15 @@ void MainWindow::buildUi()
     m_playlistAct->setCheckable(true);
     m_playlistAct->setChecked(true);
     m_playlistAct->setShortcut(QKeySequence("Ctrl+L"));
-    connect(m_playlistAct, &QAction::toggled, m_tabs, &QWidget::setVisible);
+    connect(m_playlistAct, &QAction::toggled, this, [this](bool on) { if (m_aTabs) m_aTabs->setVisible(on); });
     connect(showAll, &QToolButton::clicked, m_playlistAct, &QAction::toggle);
 
     m_split = new QSplitter(Qt::Vertical);
     m_split->setChildrenCollapsible(false);
     m_split->setHandleWidth(10);
     m_split->addWidget(top);
-    m_split->addWidget(m_tabs);
+    m_aTabs = new QWidget; { auto *l = new QVBoxLayout(m_aTabs); l->setContentsMargins(0, 0, 0, 0); l->addWidget(m_tabs); }
+    m_split->addWidget(m_aTabs);
     m_split->setStretchFactor(0, 0);
     m_split->setStretchFactor(1, 1);
 
@@ -690,10 +697,98 @@ void MainWindow::buildUi()
     outer->setSpacing(0);
     outer->addWidget(bar);
     outer->addWidget(inner, 1);
-    setCentralWidget(central);
+    // ---- Sonora layout (themes "Sonora" / "Sonora dark"): the original Sonora window - menu bar,
+    // LED ladder on the left, Audacious-style buttons with separate play and pause, classic analyser.
+    // Shared widgets (meter, seek, time, volume, spectrum, playlists) move between the two pages.
+    auto mkS = [this](const QString &tip, bool checkable = false) {
+        auto *b = new QToolButton;
+        b->setToolTip(tip);
+        b->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        b->setAutoRaise(false);
+        b->setCheckable(checkable);
+        b->setFixedSize(40, 34);
+        b->setIconSize(QSize(22, 22));
+        b->setFocusPolicy(Qt::NoFocus);
+        return b;
+    };
+    m_sPrev = mkS(tr("Previous (within filter)"));
+    m_sPlay = mkS(tr("Play"));
+    m_sPause = mkS(tr("Pause / Resume"), true);
+    m_sStop = mkS(tr("Stop"));
+    m_sNext = mkS(tr("Next (within filter)"));
+    m_sOpen = mkS(tr("Add files… (arrow: more)"));
+    m_sRepeat = mkS(tr("Repeat"), true);
+    m_sShuffle = mkS(tr("Shuffle"), true);
+    connect(m_sPrev, &QToolButton::clicked, this, [this] { step(-1); });
+    connect(m_sPlay, &QToolButton::clicked, this, &MainWindow::playClicked);
+    connect(m_sPause, &QToolButton::clicked, this, &MainWindow::pauseClicked);
+    connect(m_sStop, &QToolButton::clicked, this, &MainWindow::stopPlayback);
+    connect(m_sNext, &QToolButton::clicked, this, [this] { step(+1); });
+    connect(m_sOpen, &QToolButton::clicked, this, &MainWindow::addFiles);
+    m_sOpen->setMenu(addMenu);
+    m_sOpen->setPopupMode(QToolButton::MenuButtonPopup);
+    m_sOpen->setFixedWidth(56);
+    connect(m_sRepeat, &QToolButton::toggled, m_repeat, &QAction::setChecked);
+    connect(m_repeat, &QAction::toggled, m_sRepeat, &QToolButton::setChecked);
+    connect(m_sShuffle, &QToolButton::toggled, m_shuffle, &QAction::setChecked);
+    connect(m_shuffle, &QAction::toggled, m_sShuffle, &QToolButton::setChecked);
+    auto mkHolder = [] { auto *w = new QWidget; auto *l = new QVBoxLayout(w); l->setContentsMargins(0, 0, 0, 0); return w; };
+    m_sMeter = mkHolder(); m_sSeek = mkHolder(); m_sTime = mkHolder(); m_sVol = mkHolder();
+    m_sSpec = mkHolder(); m_sTabs = mkHolder();
+    m_sVol->setFixedWidth(120);
+    auto *sTransport = new QHBoxLayout;
+    for (QToolButton *b : {m_sPrev, m_sPlay, m_sPause, m_sStop, m_sNext, m_sOpen}) sTransport->addWidget(b);
+    sTransport->addSpacing(12);
+    sTransport->addWidget(m_sRepeat);
+    sTransport->addWidget(m_sShuffle);
+    sTransport->addStretch(1);
+    sTransport->addWidget(new QLabel(tr("Vol")));
+    sTransport->addWidget(m_sVol);
+    auto *sSeekRow = new QHBoxLayout;
+    sSeekRow->addWidget(m_sSeek, 1);
+    sSeekRow->addWidget(m_sTime);
+    auto *sRight = new QVBoxLayout;
+    sRight->addLayout(sTransport);
+    sRight->addLayout(sSeekRow);
+    sRight->addWidget(m_sSpec);
+    sRight->addWidget(m_sTabs, 1);
+    auto *sonora = new QWidget;
+    auto *sLay = new QHBoxLayout(sonora);
+    sLay->addWidget(m_sMeter);
+    sLay->addLayout(sRight, 1);
+
+    m_stack = new QStackedWidget;
+    m_stack->addWidget(central);
+    m_stack->addWidget(sonora);
+    setCentralWidget(m_stack);
     qApp->installEventFilter(this);          // resize from the window edges (frameless window)
 
     refreshIcons();
+}
+
+void MainWindow::setSonoraLayout(bool on)
+{
+    if (!m_stack || (m_sonoraLayout == on && m_stack->currentIndex() == (on ? 1 : 0))) return;
+    m_sonoraLayout = on;
+    auto put = [](QWidget *w, QWidget *holder) { holder->layout()->addWidget(w); w->show(); };
+    put(m_meter, on ? m_sMeter : m_aMeter);
+    put(m_seek, on ? m_sSeek : m_aSeek);
+    put(m_timeBtn, on ? m_sTime : m_aTime);
+    put(m_vol, on ? m_sVol : m_aVol);
+    put(m_spectrum, on ? m_sSpec : m_aSpec);
+    put(m_tabs, on ? m_sTabs : m_aTabs);
+    if (!m_spectrumAct->isChecked()) m_spectrum->hide();
+    m_meter->setHorizontal(!on);
+    m_timeBtn->setObjectName(on ? QString() : QStringLiteral("link"));
+    m_timeBtn->setAutoRaise(true);
+    m_timeBtn->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    m_timeBtn->setMinimumWidth(on ? QFontMetrics(m_timeBtn->font()).horizontalAdvance("-00:00:00 / 00:00:00") + 16 : 0);
+    m_stack->setCurrentIndex(on ? 1 : 0);
+    menuBar()->setVisible(on);
+    const bool wasVisible = isVisible();
+    setWindowFlag(Qt::FramelessWindowHint, !on);
+    if (wasVisible) show();
+    updateTimeLabel(m_player->position(), m_player->duration());
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *e)
@@ -704,7 +799,8 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *e)
             menu->setWindowFlag(Qt::NoDropShadowWindowHint);
         }
     }
-    if ((e->type() == QEvent::MouseButtonPress || e->type() == QEvent::MouseMove) && !isMaximized()) {
+    if ((e->type() == QEvent::MouseButtonPress || e->type() == QEvent::MouseMove) && !isMaximized()
+        && (windowFlags() & Qt::FramelessWindowHint)) {
         auto *w = qobject_cast<QWidget *>(obj);
         if (w && w->window() == this) {
             auto *me = static_cast<QMouseEvent *>(e);
@@ -846,10 +942,14 @@ void MainWindow::applyTheme()
         QApplication::setStyle(QStringLiteral("Fusion"));
         QApplication::setPalette(Aurora::palette(dark));
         app->setStyleSheet(Aurora::styleSheet(dark));
-    } else if (m_theme == "classic-dark") {
+    } else if (m_theme == "classic-dark") {         // Sonora dark: the original dark mode of Sonora
         QApplication::setStyle(QStringLiteral("Fusion"));
         QApplication::setPalette(darkPalette());
-        app->setStyleSheet(Aurora::styleSheet(true).section("QSlider", 0, 0));   // keep the card layout readable
+        app->setStyleSheet(QString());
+    } else if (m_theme == "sonora") {               // Sonora: the original look with the system style
+        if (!style.isEmpty()) QApplication::setStyle(style);
+        QApplication::setPalette(pal);
+        app->setStyleSheet(QString());
     } else {
         if (!style.isEmpty()) QApplication::setStyle(style);
         QApplication::setPalette(pal);
@@ -860,7 +960,9 @@ void MainWindow::applyTheme()
     QApplication::setWindowIcon(appIcon);
     setWindowIcon(appIcon);
     if (m_titleIcon) m_titleIcon->setPixmap(appIcon.pixmap(QSize(24, 24), devicePixelRatioF()));
-    if (m_spectrum) { m_spectrum->setProperty("aurora", m_theme != "classic-dark"); m_spectrum->update(); }
+    const bool sonora = m_theme == "sonora" || m_theme == "classic-dark";
+    setSonoraLayout(sonora);
+    if (m_spectrum) { m_spectrum->setProperty("aurora", !sonora); m_spectrum->update(); }
     if (m_btnPrev && m_tabs) refreshIcons();
 }
 
@@ -882,6 +984,16 @@ void MainWindow::refreshIcons()
     m_btnOpen->setIcon(make(Eject, pal, sz, dpr));
     m_btnRepeat->setIcon(make(Repeat, pal, sz, dpr));
     m_btnShuffle->setIcon(make(Shuffle, pal, sz, dpr));
+    if (m_sPrev) {
+        m_sPrev->setIcon(make(Prev, pal, sz, dpr));
+        m_sPlay->setIcon(make(Play, pal, sz, dpr));
+        m_sPause->setIcon(make(Pause, pal, sz, dpr));
+        m_sStop->setIcon(make(Stop, pal, sz, dpr));
+        m_sNext->setIcon(make(Next, pal, sz, dpr));
+        m_sOpen->setIcon(make(Eject, pal, sz, dpr));
+        m_sRepeat->setIcon(make(Repeat, pal, sz, dpr));
+        m_sShuffle->setIcon(make(Shuffle, pal, sz, dpr));
+    }
     updateTabIcons();
 }
 
@@ -1374,12 +1486,14 @@ void MainWindow::pauseClicked()
     if (m_player->state() == Player::Playing) m_player->pause();
     else if (m_player->state() == Player::Paused) m_player->resume();
     m_btnPause->setChecked(m_player->state() == Player::Paused);
+    if (m_sPause) m_sPause->setChecked(m_player->state() == Player::Paused);
 }
 
 void MainWindow::pauseOnly()
 {
     if (m_player->state() == Player::Playing) m_player->pause();
     m_btnPause->setChecked(m_player->state() == Player::Paused);
+    if (m_sPause) m_sPause->setChecked(m_player->state() == Player::Paused);
 }
 
 // Space and the keyboard's Play/Pause key: pause/resume, or start playing when stopped.
@@ -1394,6 +1508,7 @@ void MainWindow::stopPlayback() { m_player->stop(); }
 void MainWindow::onStateChanged(Player::State s)
 {
     if (m_btnPrev && m_tabs) refreshIcons();
+    if (m_sPause) m_sPause->setChecked(s == Player::Paused);
     if (m_mpris) m_mpris->setState(s);
     m_viz->setPaused(s == Player::Paused);          // sound stopped: stop feeding the displays ...
     if (s == Player::Paused) {                      // ... and let LEDs / bars / peak markers drop at once
@@ -1434,6 +1549,10 @@ void MainWindow::updateTimeLabel(qint64 pos, qint64 dur)
     QString a = (m_showRemaining && dur > 0)
         ? QStringLiteral("-") + formatDuration(std::max<qint64>(0, dur - pos))
         : formatDuration(pos);
+    if (m_sonoraLayout) {                         // original Sonora: "0:15 / 2:56" in one button
+        m_timeBtn->setText(dur > 0 ? a + QStringLiteral(" / ") + formatDuration(dur) : a);
+        return;
+    }
     m_elapsed->setText(formatDuration(pos));
     m_timeBtn->setText(dur <= 0 ? QStringLiteral("--:--")
                        : m_showRemaining ? QStringLiteral("−") + formatDuration(std::max<qint64>(0, dur - pos))

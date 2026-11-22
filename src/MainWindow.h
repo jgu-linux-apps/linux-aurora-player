@@ -85,6 +85,7 @@ private:
     bool systemIsDark() const;
     void updateHero();
     void updateUpNext();
+    void setSonoraLayout(bool on);
     QString dataDir() const;
     void savePlaylists();
     void loadPlaylists();
@@ -118,6 +119,12 @@ private:
     QLabel *m_elapsed = nullptr;
     QAction *m_closeToTrayAct = nullptr;
     bool m_quitting = false;
+    bool m_sonoraLayout = false;
+    class QStackedWidget *m_stack = nullptr;
+    QWidget *m_aMeter = nullptr, *m_aSeek = nullptr, *m_aTime = nullptr, *m_aVol = nullptr, *m_aSpec = nullptr, *m_aTabs = nullptr;
+    QWidget *m_sMeter = nullptr, *m_sSeek = nullptr, *m_sTime = nullptr, *m_sVol = nullptr, *m_sSpec = nullptr, *m_sTabs = nullptr;
+    QToolButton *m_sPrev = nullptr, *m_sPlay = nullptr, *m_sPause = nullptr, *m_sStop = nullptr, *m_sNext = nullptr,
+                *m_sOpen = nullptr, *m_sRepeat = nullptr, *m_sShuffle = nullptr;
 
     QDockWidget *m_dock = nullptr;          // playlist manager
     QTreeWidget *m_mgr = nullptr;

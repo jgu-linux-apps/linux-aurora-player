@@ -1,3 +1,15 @@
+linux-aurora-player (0.5.0) unstable; urgency=medium
+
+  * Aurora spectrum analyser is the full Sonora analyser again: every bar,
+    kHz axis, grid, peak caps and LED colours, on a navy Aurora panel with
+    a dB scale; all spectrum preferences apply.
+  * New themes "Sonora" and "Sonora dark": the original Sonora window with
+    the menu bar, LED ladder on the left, separate play and pause buttons
+    and the classic analyser (replaces "Classic dark").
+  * English plural forms for track and playlist counts.
+
+ -- JGu <noreply@example.invalid>  Sun, 22 Nov 2026 09:38:33 +0100
+
 linux-aurora-player (0.4.0) unstable; urgency=medium
 
   * Polish translation of the whole interface (built in, with Polish plural

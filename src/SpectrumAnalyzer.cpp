@@ -115,49 +115,19 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
     QPainter p(this);
     p.fillRect(rect(), palette().color(QPalette::Window));
 
-    if (property("aurora").toBool()) {
-        // Aurora look: mirrored rounded bars around the centre line (bars grouped by their maximum)
-        p.setRenderHint(QPainter::Antialiasing);
-        const QRectF area(2, 2, width() - 4, height() - 4);
-        const int src = int(m_bar.size());
-        const int groups = std::clamp(int(area.width() / 11), 8, std::max(8, src));
-        const double gw = area.width() / groups;
-        const double bw = std::max(2.0, gw * 0.62);
-        const double mid = area.center().y();
-        QLinearGradient g(0, area.top(), 0, area.bottom());
-        g.setColorAt(0.0, palette().color(QPalette::Link));
-        g.setColorAt(0.5, palette().color(QPalette::Highlight));
-        g.setColorAt(1.0, palette().color(QPalette::Link));
-        p.setPen(Qt::NoPen);
-        p.setBrush(g);
-        const double floorDb = m_cfg.floorDb, ceilDb = m_cfg.ceilDb;
-        for (int k = 0; k < groups; ++k) {
-            double v = floorDb;
-            // linear analyser axis: spread the low end (where music lives) with a power curve
-            const double c = m_cfg.logScale ? 1.0 : 2.4;
-            const int a0 = int(src * std::pow(double(k) / groups, c));
-            const int a1 = std::max(a0 + 1, int(src * std::pow(double(k + 1) / groups, c)));
-            for (int j = a0; j < a1 && j < src; ++j) v = std::max(v, m_bar[j]);
-            const double t = std::clamp((v - floorDb) / (ceilDb - floorDb), 0.0, 1.0);
-            const double h = std::max(bw, t * area.height());
-            const double x = area.left() + k * gw + (gw - bw) / 2;
-            QColor idle = palette().color(QPalette::Highlight); idle.setAlpha(45);
-            if (t <= 0.0) { p.setBrush(idle); } else { p.setBrush(g); }
-            p.drawRoundedRect(QRectF(x, mid - h / 2, bw, h), bw / 2, bw / 2);
-        }
-        return;
-    }
-
-    const QRect plot(4, 4, width() - 8, height() - 8 - 14);
-    if (plot.width() < 40 || plot.height() < 20) return;
-    // Aurora look (dynamic property "aurora"): plot in the view colour, violet -> cyan bars
+    // Aurora (variant C): the full Sonora analyser - all bars, kHz axis, grid, peak caps, LED colours -
+    // on a rounded navy panel, plus a dB scale on the left.
     const bool aurora = property("aurora").toBool();
+    const int left = aurora ? 34 : 4;
+    const QRect plot(left, 4, width() - left - 4, height() - 8 - 14);
+    if (plot.width() < 40 || plot.height() < 20) return;
     const QPalette &pal = palette();
     if (aurora) {
+        const bool darkUi = pal.color(QPalette::Window).lightness() < 128;
         p.setRenderHint(QPainter::Antialiasing);
         p.setPen(Qt::NoPen);
-        p.setBrush(pal.color(QPalette::Base));
-        p.drawRoundedRect(QRectF(plot).adjusted(-2, -2, 2, 2), 10, 10);
+        p.setBrush(QColor(darkUi ? "#13151f" : "#1d1640"));
+        p.drawRoundedRect(QRectF(plot).adjusted(-4, -4, 4, 4), 10, 10);
         p.setRenderHint(QPainter::Antialiasing, false);
     } else {
         p.fillRect(plot, QColor(25, 25, 25));
@@ -180,7 +150,18 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
     p.setFont(f);
     const QColor txt = palette().color(QPalette::WindowText);
     QColor grid(255, 255, 255, 28);
-    if (aurora) { grid = txt; grid.setAlpha(22); }
+    if (aurora) {                                    // dB scale on the left, horizontal grid lines
+        grid = QColor(255, 255, 255, 26);
+        const int steps = 4;
+        for (int i = 0; i <= steps; ++i) {
+            const double db = ceilDb - (ceilDb - floorDb) * i / steps;
+            const int y = yOf(db);
+            p.setPen(grid);
+            p.drawLine(plot.left(), y, plot.right(), y);
+            p.setPen(txt);
+            p.drawText(QRect(0, y - 7, left - 8, 14), Qt::AlignRight | Qt::AlignVCenter, QString::number(int(std::lround(db))));
+        }
+    }
 
     std::vector<double> marks;
     if (m_cfg.logScale) {
@@ -211,12 +192,7 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
     g.setColorAt(0.6, QColor(0, 200, 70));
     g.setColorAt(0.85, QColor(230, 210, 0));
     g.setColorAt(1.0, QColor(230, 40, 30));
-    if (aurora) {
-        g = QLinearGradient(0, plot.bottom() + 1, 0, plot.top());
-        g.setColorAt(0.0, pal.color(QPalette::Highlight));
-        g.setColorAt(1.0, pal.color(QPalette::Link));
-    }
-    const QColor capColor = aurora ? pal.color(QPalette::Link) : QColor(255, 255, 255);
+    const QColor capColor(255, 255, 255);
     const QBrush brush(g);
 
     const int bars = int(m_bar.size());
