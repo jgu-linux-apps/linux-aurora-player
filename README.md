@@ -7,8 +7,24 @@ sound service, and media-key support.
 Homepage: <https://github.com/jgu-linux-apps/linux-aurora-player> - License: GPL-3.0-or-later (see `COPYING`).
 
 > **Fork of Sonora.** Linux Aurora Player is a fork of [Sonora](https://github.com/przemyslawguza/sonora) by
-> Przemysław Guza, part of the JGu Linux Apps series. Features are unchanged; the fork focuses on a modernised
-> interface, a tray icon and the Aurora light/dark theme. Full credit for the player itself goes to the original author.
+> Przemysław Guza, part of the JGu Linux Apps series. All of Sonora's features are kept; the fork adds a modernised
+> interface, album covers, a panel (tray) icon, the Aurora light/dark theme and a Polish translation.
+> Full credit for the player itself goes to the original author.
+
+## What the fork adds
+
+* **Modern main window** (Aurora themes): own title bar with rounded corners, now-playing card with the album cover and
+  format chips, big round transport buttons, a Level card (L/R LEDs, live true-peak in dBTP), an Up next card and the
+  full spectrum analyser (bars, kHz axis, dB scale, peak caps). The playlist can be hidden (Ctrl+L).
+* **Album covers**: a picture next to the audio file (`cover`, `folder`, `front`, `album`, `AlbumArt*` as
+  .jpg / .png / .webp) or the picture embedded in the tags (ID3, FLAC, MP4). Shown in the now-playing card and the Up
+  next list and passed to GNOME through MPRIS. Embedded pictures are cached in `~/.cache/linux-aurora-player/covers`.
+* **Themes** (◐ button or View > Theme): Aurora (follows the system), Aurora light, Aurora dark, System, and
+  **Sonora / Sonora dark** - the original Sonora window with the menu bar, LED ladder and classic analyser.
+* **App icon** with a dark variant; the dock icon follows the system light/dark mode, also while the app is closed.
+* **Panel (tray) icon** with play / pause, previous, next, stop and quit. Closing the window keeps the music playing
+  (View > Close to panel icon); Ctrl+Q quits.
+* **English and Polish** interface: Preferences > General > Language (automatic / English / Polski).
 
 ## Features
 
@@ -18,7 +34,7 @@ Homepage: <https://github.com/jgu-linux-apps/linux-aurora-player> - License: GPL
   they are visible with any theme. Repeat, Shuffle, Previous and Next work inside the *filtered* view of the playing
   playlist.
 * Elapsed / total time; click the time (or View > Show remaining time) for the remaining time.
-* View > Dark mode.
+* Themes: View > Theme (Aurora, System, Sonora, Sonora dark).
 
 **Playlists**
 * Any number of playlists as tabs (`+`, Ctrl+T new, Ctrl+W close, F2 or double-click to rename, drag to reorder).
@@ -124,7 +140,7 @@ together with the ALSA, PulseAudio and PipeWire sinks.
 ## Known limitations
 
 * A cue sheet embedded inside a FLAC (`CUESHEET` tag) is not read; use an external `.cue`.
-* No cover art, tag editing, equaliser or ReplayGain.
+* No tag editing, equaliser or ReplayGain.
 * Tracks that are separate files are not played gaplessly (tracks of one cue image switch without re-opening the file).
 * The meters and spectrum rely on the sound sink reporting its playback position; if a sink does not, they fall back
   to a plain delay (the fine-tuning offset).
