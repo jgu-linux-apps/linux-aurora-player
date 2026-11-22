@@ -119,7 +119,8 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
     // on a rounded navy panel, plus a dB scale on the left.
     const bool aurora = property("aurora").toBool();
     const int left = aurora ? 34 : 4;
-    const QRect plot(left, 4, width() - left - 4, height() - 8 - 14);
+    const int axisH = aurora ? 20 : 14;
+    const QRect plot(left, aurora ? 6 : 4, width() - left - (aurora ? 6 : 4), height() - (aurora ? 12 : 8) - axisH);
     if (plot.width() < 40 || plot.height() < 20) return;
     const QPalette &pal = palette();
     if (aurora) {
@@ -127,7 +128,7 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
         p.setRenderHint(QPainter::Antialiasing);
         p.setPen(Qt::NoPen);
         p.setBrush(QColor(darkUi ? "#13151f" : "#1d1640"));
-        p.drawRoundedRect(QRectF(plot).adjusted(-4, -4, 4, 4), 10, 10);
+        p.drawRoundedRect(QRectF(plot).adjusted(-4, -4, 4, 3), 10, 10);
         p.setRenderHint(QPainter::Antialiasing, false);
     } else {
         p.fillRect(plot, QColor(25, 25, 25));
@@ -159,7 +160,8 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
             p.setPen(grid);
             p.drawLine(plot.left(), y, plot.right(), y);
             p.setPen(txt);
-            p.drawText(QRect(0, y - 7, left - 8, 14), Qt::AlignRight | Qt::AlignVCenter, QString::number(int(std::lround(db))));
+            const int ty = i == steps ? y - 12 : (i == 0 ? y - 2 : y - 7);   // keep first / last label inside
+            p.drawText(QRect(0, ty, left - 8, 14), Qt::AlignRight | Qt::AlignVCenter, QString::number(int(std::lround(db))));
         }
     }
 
@@ -181,7 +183,7 @@ void SpectrumAnalyzer::paintEvent(QPaintEvent *)
         p.setPen(grid);
         p.drawLine(x, plot.top(), x, plot.bottom());
         p.setPen(txt);
-        QRect r(0, plot.bottom() + 2, 40, 12);
+        QRect r(0, plot.bottom() + (aurora ? 7 : 2), 40, 12);
         r.moveLeft(std::clamp(x - 20, 0, std::max(0, width() - 40)));
         p.drawText(r, Qt::AlignCenter, freqText(hz));
     }

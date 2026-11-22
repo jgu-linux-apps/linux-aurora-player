@@ -1,3 +1,10 @@
+linux-aurora-player (0.5.2) unstable; urgency=medium
+
+  * Aurora analyser: kHz labels sit below the panel and the dB labels no
+    longer collide with the axis.
+
+ -- JGu <noreply@example.invalid>  Sun, 22 Nov 2026 09:43:00 +0100
+
 linux-aurora-player (0.5.1) unstable; urgency=medium
 
   * Rounded window corners (12 px) with the Aurora title bar: translucent
