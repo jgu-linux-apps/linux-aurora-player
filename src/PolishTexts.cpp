@@ -70,6 +70,7 @@ const QHash<QString, QString> &polishTexts()
         {QStringLiteral("Aurora dark"), QStringLiteral("Aurora ciemna")},
         {QStringLiteral("System"), QStringLiteral("Systemowy")},
         {QStringLiteral("Sonora"), QStringLiteral("Sonora")},
+        {QStringLiteral("Opened files"), QStringLiteral("Otwarte pliki")},
         {QStringLiteral("Sonora dark"), QStringLiteral("Sonora ciemny")},
         {QStringLiteral("Pause / Resume"), QStringLiteral("Pauza / wznów")},
         {QStringLiteral("&Help"), QStringLiteral("Pomo&c")},

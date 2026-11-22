@@ -1,9 +1,17 @@
 #include <QApplication>
+#include <QDBusConnection>
+#include <QDBusConnectionInterface>
+#include <QDBusInterface>
+#include <QDBusMessage>
+#include <QFileInfo>
+#include <QUrl>
 #include <QLibraryInfo>
 #include <QLocale>
 #include <QSettings>
 #include <QTranslator>
 #include "Translator.h"
+
+static constexpr const char *kInstanceService = "org.jgu.LinuxAuroraPlayer";
 #include <QElapsedTimer>
 #include <QTimer>
 #include <cstdio>
@@ -25,6 +33,25 @@ int main(int argc, char **argv)
     std::thread gstInit([] { gst_init(nullptr, nullptr); });
 
     QApplication app(argc, argv);
+
+    // ---- single instance: a second start hands its files to the running player and ends
+    QStringList files;
+    for (const QString &a : QApplication::arguments().mid(1)) {
+        const QUrl u(a);
+        files << (u.isLocalFile() ? u.toLocalFile() : QFileInfo(a).absoluteFilePath());
+    }
+    {
+        QDBusConnection bus = QDBusConnection::sessionBus();
+        if (bus.isConnected() && bus.interface()->isServiceRegistered(QString::fromLatin1(kInstanceService))) {
+            QDBusInterface running(QString::fromLatin1(kInstanceService), QStringLiteral("/player"),
+                                   QString::fromLatin1(kInstanceService), bus);
+            const QDBusMessage reply = running.call(QStringLiteral("openFiles"), files);
+            if (reply.type() == QDBusMessage::ReplyMessage) {
+                gstInit.join();
+                return 0;
+            }
+        }
+    }
     QApplication::setApplicationName("linux-aurora-player");
     QApplication::setApplicationDisplayName("Linux Aurora Player");
     QApplication::setOrganizationName("linux-aurora-player");
@@ -53,11 +80,12 @@ int main(int argc, char **argv)
     gstInit.join();                          // ... then make sure GStreamer is ready
     mark("GStreamer initialised");
 
-    const QStringList args = QApplication::arguments().mid(1);
-    if (!args.isEmpty()) {
-        w.addPaths(args);
-        w.playFirst();
+    {
+        QDBusConnection bus = QDBusConnection::sessionBus();
+        if (bus.isConnected() && bus.registerService(QString::fromLatin1(kInstanceService)))
+            bus.registerObject(QStringLiteral("/player"), &w, QDBusConnection::ExportScriptableSlots);
     }
+    if (!files.isEmpty()) w.openFiles(files);
     QTimer::singleShot(0, [&] { mark("event loop running"); });
     // AURORA_SCREENSHOT=/path.png: save the window after start-up and quit (UI tests, docs)
     const QString shot = qEnvironmentVariable("AURORA_SCREENSHOT");

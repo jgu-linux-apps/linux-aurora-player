@@ -32,11 +32,17 @@ class TrayIcon;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.jgu.LinuxAuroraPlayer")
 public:
     explicit MainWindow(QWidget *parent = nullptr);
 
     void addPaths(const QStringList &paths);   // files, folders, playlists -> current playlist
     void playFirst();
+
+public slots:
+    // Files opened from the file manager / command line (also from a second start, over D-Bus):
+    // they replace the "Opened files" playlist and start playing; other playlists stay untouched.
+    Q_SCRIPTABLE void openFiles(const QStringList &paths);
 
 protected:
     void closeEvent(QCloseEvent *e) override;

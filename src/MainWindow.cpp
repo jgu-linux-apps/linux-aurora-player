@@ -27,6 +27,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QSplitter>
+#include <QStyleOptionSlider>
 #include <QStackedWidget>
 #include <QStyleHints>
 #include <QApplication>
@@ -814,6 +815,25 @@ void MainWindow::setSonoraLayout(bool on)
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *e)
 {
+    // seek bar and volume: a click jumps straight to that place (not one page step)
+    if (e->type() == QEvent::MouseButtonPress && (obj == m_seek || obj == m_vol)) {
+        auto *sl = static_cast<QSlider *>(obj);
+        auto *me = static_cast<QMouseEvent *>(e);
+        QStyleOptionSlider opt;
+        opt.initFrom(sl);
+        opt.minimum = sl->minimum(); opt.maximum = sl->maximum();
+        opt.sliderPosition = sl->value(); opt.orientation = sl->orientation();
+        const QRect handle = sl->style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderHandle, sl);
+        if (me->button() == Qt::LeftButton && !handle.contains(me->position().toPoint()) && sl->maximum() > sl->minimum()) {
+            const QRect groove = sl->style()->subControlRect(QStyle::CC_Slider, &opt, QStyle::SC_SliderGroove, sl);
+            const int span = std::max(1, groove.width() - handle.width());
+            const int x = int(me->position().x()) - groove.left() - handle.width() / 2;
+            const int v = QStyle::sliderValueFromPosition(sl->minimum(), sl->maximum(), x, span, opt.upsideDown);
+            sl->setValue(v);
+            if (sl == m_seek) { m_player->seek(v); updateTimeLabel(v, m_player->duration()); }
+            return true;
+        }
+    }
     if (e->type() == QEvent::Polish) {
         if (auto *menu = qobject_cast<QMenu *>(obj)) {
             menu->setAttribute(Qt::WA_TranslucentBackground);
@@ -1321,6 +1341,24 @@ void MainWindow::addPaths(const QStringList &paths)
 }
 
 void MainWindow::playFirst() { playFrom(current(), 0); }
+
+void MainWindow::openFiles(const QStringList &paths)
+{
+    showNormal();
+    raise();
+    activateWindow();
+    if (paths.isEmpty()) return;
+    const QString name = tr("Opened files");
+    PlaylistWidget *w = nullptr;
+    for (int i = 0; i < m_tabs->count(); ++i)
+        if (m_tabs->tabText(i).remove('&') == name) { w = playlistAt(i); break; }
+    if (w && w == m_playing) m_player->stop();
+    if (!w) w = createPlaylist(name, true);
+    m_tabs->setCurrentWidget(w);
+    w->model()->clear();
+    addPaths(paths);                          // goes into the current (= this) playlist
+    if (w->proxy()->rowCount() > 0) playFrom(w, 0);
+}
 
 void MainWindow::addFiles()
 {
