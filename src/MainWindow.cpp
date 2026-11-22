@@ -634,6 +634,7 @@ void MainWindow::buildUi()
 
     // ---- own title bar: app icon, name, playlist chip, playlist / theme / menu buttons, window buttons.
     // The classic menu bar is hidden; its actions are added to the window so all shortcuts keep working.
+    setAttribute(Qt::WA_TranslucentBackground);     // rounded window corners (drawn by the style sheet)
     setWindowFlag(Qt::FramelessWindowHint);
     menuBar()->hide();
     auto *mainMenu = new QMenu(this);
@@ -692,6 +693,7 @@ void MainWindow::buildUi()
     lay->setContentsMargins(16, 6, 16, 4);
     lay->addWidget(m_split);
     auto *central = new QWidget;
+    central->setObjectName("auroraPage");
     auto *outer = new QVBoxLayout(central);
     outer->setContentsMargins(0, 0, 0, 0);
     outer->setSpacing(0);
@@ -786,7 +788,12 @@ void MainWindow::setSonoraLayout(bool on)
     m_stack->setCurrentIndex(on ? 1 : 0);
     menuBar()->setVisible(on);
     const bool wasVisible = isVisible();
+    setAttribute(Qt::WA_TranslucentBackground, !on);
     setWindowFlag(Qt::FramelessWindowHint, !on);
+    setProperty("sonoraLayout", on);
+    statusBar()->setProperty("sonoraLayout", on);
+    statusBar()->style()->unpolish(statusBar());
+    statusBar()->style()->polish(statusBar());
     if (wasVisible) show();
     updateTimeLabel(m_player->position(), m_player->duration());
 }

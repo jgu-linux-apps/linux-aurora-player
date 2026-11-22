@@ -48,7 +48,12 @@ QString styleSheet(bool dark)
     const Colors c = colors(dark);
     auto n = [](const QColor &x) { return x.name(); };
     QString s = QStringLiteral(R"(
-QMainWindow, QMenuBar { background: %1; }
+QMainWindow { background: transparent; }
+QMainWindow[sonoraLayout="true"] { background: %1; }
+QMenuBar { background: %1; }
+QWidget#auroraPage { background: %1; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+QStatusBar { background: %1; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+QStatusBar[sonoraLayout="true"] { border-radius: 0; }
 QMenu { background: %2; border: 1px solid %3; border-radius: 12px; padding: 6px; }
 QMenu::item { padding: 7px 28px 7px 14px; border-radius: 8px; color: %14; }
 QMenu::item:selected { background: %9; color: %15; }
@@ -59,7 +64,7 @@ QMenu::indicator:checked { background: %9; border-radius: 4px; }
 QMenu::indicator:unchecked { border: 1px solid %3; border-radius: 4px; }
 QMenu::right-arrow { width: 8px; height: 8px; }
 QToolTip { background: %2; color: %14; border: 1px solid %3; border-radius: 8px; padding: 5px 8px; }
-QFrame#titleBar { background: %1; border-bottom: 1px solid %3; }
+QFrame#titleBar { background: %1; border-bottom: 1px solid %3; border-top-left-radius: 12px; border-top-right-radius: 12px; }
 QLabel#titleText { font-weight: 600; font-size: 11pt; }
 QToolButton#barBtn { border: none; border-radius: 15px; min-width: 30px; min-height: 30px; font-size: 13pt; }
 QToolButton#barBtn::menu-indicator { image: none; width: 0; }
