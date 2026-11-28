@@ -72,23 +72,29 @@ QToolButton#barBtn:hover, QToolButton#winBtn:hover { background: %12; }
 QToolButton#winBtn, QToolButton#winClose { border: none; border-radius: 13px; min-width: 26px; min-height: 26px; background: %12; }
 QToolButton#winClose:hover { background: #e5484d; color: white; }
 QFrame#card { background: %2; border: 1px solid %3; border-radius: 14px; }
-QFrame#hero { background: %4; border: none; border-radius: 18px; }
-QLabel#heroKicker { color: %5; font-size: 9pt; }
-QLabel#heroTitle { color: %6; font-size: 17pt; font-weight: 600; }
-QLabel#heroSub { color: %5; font-size: 10pt; }
+QFrame#hero { background: %4; border: none; border-radius: 12px; }
+QLabel#heroKicker { color: %5; font-size: 8pt; }
+QLabel#heroTitle { color: %6; font-size: 11pt; font-weight: 600; }
+QLabel#heroSub { color: %5; font-size: 9pt; }
 QLabel#chip { background: %7; color: %5; border-radius: 9px; padding: 2px 9px; font-size: 8.5pt; }
 QLabel#cardTitle { font-weight: 600; }
 QLabel#muted { color: %8; }
 QLabel#peak { color: #e5484d; font-weight: 600; }
 QLabel#tile { background: %4; color: %5; border-radius: 8px; font-size: 13pt; }
 QLabel#tileCue { background: #dff5ec; color: #0f6e56; border-radius: 8px; font-size: 7.5pt; font-weight: 600; }
-QToolButton#round { background: %2; border: 1px solid %3; border-radius: 9px; }
+QToolButton#round { background: %2; border: 1px solid %3; border-radius: 8px; }
 QToolButton#round:hover { border-color: %9; }
 QToolButton#round:checked { border: 2px solid %9; }
 QToolButton#small { background: %2; border: 1px solid %3; border-radius: 8px; }
 QToolButton#small:hover { border-color: %9; }
-QToolButton#bigPlay { background: %9; border: none; border-radius: 14px; }
+QToolButton#bigPlay { background: %9; border: none; border-radius: 11px; }
 QToolButton#bigPlay:hover { background: %10; }
+QMainWindow[auroraClassic="true"] QFrame#hero { border-radius: 18px; }
+QMainWindow[auroraClassic="true"] QLabel#heroKicker { font-size: 9pt; }
+QMainWindow[auroraClassic="true"] QLabel#heroTitle { font-size: 17pt; }
+QMainWindow[auroraClassic="true"] QLabel#heroSub { font-size: 10pt; }
+QMainWindow[auroraClassic="true"] QToolButton#round { border-radius: 9px; }
+QMainWindow[auroraClassic="true"] QToolButton#bigPlay { border-radius: 14px; }
 QToolButton#link { color: %11; border: none; background: transparent; }
 QToolButton#link:hover { text-decoration: underline; }
 QListWidget#upNext { background: transparent; border: none; }

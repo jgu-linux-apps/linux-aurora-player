@@ -1,3 +1,34 @@
+linux-aurora-player (0.6.7) unstable; urgency=medium
+
+  * Fix: after switching from an Aurora theme to Sonora, the panels were
+    fully transparent until the app was restarted.
+
+ -- JGu <noreply@example.invalid>  Sat, 28 Nov 2026 14:57:54 +0100
+
+linux-aurora-player (0.6.6) unstable; urgency=medium
+
+  * New theme "Aurora classic (large controls)": the previous Aurora layout
+    with the big now-playing card and large transport buttons. The compact
+    layout stays the default Aurora look.
+
+ -- JGu <noreply@example.invalid>  Sat, 28 Nov 2026 14:55:52 +0100
+
+linux-aurora-player (0.6.5) unstable; urgency=medium
+
+  * Right-click menu on "Up next": play, remove from playlist, add files /
+    folder / URL, show or hide the playlist.
+  * Playlist right-click menu: add URL and clear playlist.
+
+ -- JGu <noreply@example.invalid>  Sat, 28 Nov 2026 14:52:08 +0100
+
+linux-aurora-player (0.6.4) unstable; urgency=medium
+
+  * C+ layout: compact one-line "now playing" bar, album cover next to the
+    spectrum analyser, smaller transport buttons in one row with volume,
+    and the playlist gets most of the window.
+
+ -- JGu <noreply@example.invalid>  Sat, 28 Nov 2026 14:46:37 +0100
+
 linux-aurora-player (0.6.3) unstable; urgency=medium
 
   * Fix: "Aurora (follows system)" stayed light in GNOME dark mode, because

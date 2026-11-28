@@ -264,7 +264,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
         if (a->data().toString() == m_theme) a->setChecked(true);
     applyTheme();
     m_playlistAct->setChecked(s.value("playlistVisible", false).toBool());
-    m_split->restoreState(s.value("splitter").toByteArray());
+    m_split->restoreState(s.value("splitter2").toByteArray());
 
     m_player->setOutput(m_cfg.audio);            // only stored; applied when the first track starts
     updateOutputLabel();
@@ -351,7 +351,7 @@ void MainWindow::buildUi()
     m_themeGroup = new QActionGroup(this);
     const QList<QPair<QString, QString>> themes = {
         {"aurora", tr("Aurora (follows system)")}, {"aurora-light", tr("Aurora light")},
-        {"aurora-dark", tr("Aurora dark")}, {"system", tr("System")}, {"sonora", tr("Sonora")}, {"classic-dark", tr("Sonora dark")}};
+        {"aurora-dark", tr("Aurora dark")}, {"aurora-classic", tr("Aurora classic (large controls)")}, {"system", tr("System")}, {"sonora", tr("Sonora")}, {"classic-dark", tr("Sonora dark")}};
     for (const auto &t : themes) {
         QAction *a = themeMenu->addAction(t.second);
         a->setCheckable(true);
@@ -385,22 +385,22 @@ void MainWindow::buildUi()
         b->setToolButtonStyle(Qt::ToolButtonIconOnly);
         b->setCheckable(checkable);
         b->setFixedSize(size, size);
-        b->setIconSize(QSize(18, 18));
+        b->setIconSize(QSize(16, 16));
         b->setFocusPolicy(Qt::NoFocus);         // so Space always means play/pause
         b->setCursor(Qt::PointingHandCursor);
         return b;
     };
-    m_btnPrev    = mkBtn(tr("Previous (within filter)"));
-    m_btnPlay    = mkBtn(tr("Play / Pause (Space)"), false, 60);
+    m_btnPrev    = mkBtn(tr("Previous (within filter)"), false, 32);
+    m_btnPlay    = mkBtn(tr("Play / Pause (Space)"), false, 44);
     m_btnPlay->setObjectName("bigPlay");
-    m_btnPlay->setIconSize(QSize(28, 28));
+    m_btnPlay->setIconSize(QSize(22, 22));
     m_btnPause   = m_btnPlay;                   // one button for play and pause
     m_btnStop    = mkBtn(tr("Stop"));
-    m_btnNext    = mkBtn(tr("Next (within filter)"));
+    m_btnNext    = mkBtn(tr("Next (within filter)"), false, 32);
     m_btnOpen    = mkBtn(tr("Add files… (arrow: more)"));
     m_btnOpen->setFixedWidth(62);
-    m_btnRepeat  = mkBtn(tr("Repeat"), true);
-    m_btnShuffle = mkBtn(tr("Shuffle"), true);
+    m_btnRepeat  = mkBtn(tr("Repeat"), true, 32);
+    m_btnShuffle = mkBtn(tr("Shuffle"), true, 32);
     connect(m_btnPrev,  &QToolButton::clicked, this, [this] { step(-1); });
     connect(m_btnPlay,  &QToolButton::clicked, this, &MainWindow::togglePlayPause);
     connect(m_btnStop,  &QToolButton::clicked, this, &MainWindow::stopPlayback);
@@ -433,18 +433,18 @@ void MainWindow::buildUi()
     });
 
     auto *transport = new QHBoxLayout;
-    transport->setSpacing(12);
-    transport->addStretch(1);
+    transport->setSpacing(8);
+    transport->addStretch(0);                       // stretches are used by the classic layout only
     for (QToolButton *b : {m_btnShuffle, m_btnPrev, m_btnPlay, m_btnNext, m_btnRepeat})
         transport->addWidget(b);
-    transport->addStretch(1);
+    transport->addStretch(0);
     for (QToolButton *b : {m_btnStop, m_btnOpen}) {
         b->setObjectName("small");
-        b->setFixedHeight(34);
-        b->setIconSize(QSize(16, 16));
+        b->setFixedHeight(32);
+        b->setIconSize(QSize(14, 14));
     }
-    m_btnStop->setFixedWidth(34);
-    m_btnOpen->setFixedWidth(48);
+    m_btnStop->setFixedWidth(32);
+    m_btnOpen->setFixedWidth(46);
 
     auto *volRow = new QHBoxLayout;
     auto *volIcon = new QLabel(tr("Vol"));
@@ -503,20 +503,17 @@ void MainWindow::buildUi()
     hero->setObjectName("hero");
     hero->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
     auto *heroLay = new QHBoxLayout(hero);
-    heroLay->setContentsMargins(18, 18, 18, 18);
-    heroLay->setSpacing(18);
+    heroLay->setContentsMargins(14, 8, 14, 8);
+    heroLay->setSpacing(10);
     m_cover = new CoverTile;
-    heroLay->addWidget(m_cover);
-    auto *heroText = new QVBoxLayout;
-    heroText->setSpacing(4);
     m_heroKicker = new QLabel(tr("Now playing"));
     m_heroKicker->setObjectName("heroKicker");
     m_heroTitle = new QLabel(tr("Nothing playing"));
     m_heroTitle->setObjectName("heroTitle");
-    m_heroTitle->setWordWrap(true);
+    m_heroTitle->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     m_heroSub = new QLabel(tr("Add files or pick a track from the playlist"));
     m_heroSub->setObjectName("heroSub");
-    m_heroSub->setWordWrap(true);
+    m_heroSub->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     auto *chipRow = new QHBoxLayout;
     chipRow->setSpacing(6);
     for (QLabel *&c : m_chips) {
@@ -525,27 +522,31 @@ void MainWindow::buildUi()
         c->hide();
         chipRow->addWidget(c);
     }
-    chipRow->addStretch(1);
-    heroText->addStretch(1);
+    auto *heroText = new QBoxLayout(QBoxLayout::LeftToRight);   // a row (compact) or a column (classic)
+    heroText->setSpacing(10);
     heroText->addWidget(m_heroKicker);
-    heroText->addWidget(m_heroTitle);
-    heroText->addWidget(m_heroSub);
-    heroText->addSpacing(6);
+    heroText->addWidget(m_heroTitle, 2);
+    heroText->addWidget(m_heroSub, 3);
     heroText->addLayout(chipRow);
-    heroText->addStretch(1);
     heroLay->addLayout(heroText, 1);
 
     auto *leftCol = new QVBoxLayout;
     leftCol->setSpacing(12);
     leftCol->addWidget(hero);
     m_aSpec = new QWidget; { auto *l = new QVBoxLayout(m_aSpec); l->setContentsMargins(0, 0, 0, 0); l->addWidget(m_spectrum); }
-    m_aSpec->setMinimumHeight(130);
-    m_aSpec->setMaximumHeight(190);
-    leftCol->addWidget(m_aSpec, 1);
+    m_aSpec->setFixedHeight(128);
+    auto *specRow = new QHBoxLayout;               // album cover next to the spectrum analyser
+    specRow->setSpacing(12);
+    specRow->addWidget(m_cover);
+    specRow->addWidget(m_aSpec, 1);
+    leftCol->addLayout(specRow);
     leftCol->addLayout(seekRow);
+    transport->addSpacing(12);                     // one row: transport, volume, stop / add
+    transport->addLayout(volRow, 1);
     leftCol->addLayout(transport);
-    leftCol->addLayout(volRow);
     leftCol->addStretch(1);
+    m_hero = hero; m_heroLay = heroLay; m_heroText = heroText; m_specRow = specRow;
+    m_leftCol = leftCol; m_transport = transport; m_volRow = volRow;
 
     // ---- "Level" card: LED ladder with true-peak
     auto *levelCard = new QFrame;
@@ -600,6 +601,35 @@ void MainWindow::buildUi()
         const QModelIndex pi = m_playing->proxy()->mapFromSource(m_playing->model()->index(src));
         if (pi.isValid()) playFrom(m_playing, pi.row());
     });
+    m_upNext->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_upNext, &QWidget::customContextMenuRequested, this, [this](const QPoint &pos) {
+        QListWidgetItem *it = m_upNext->itemAt(pos);
+        const QVariant srcV = it ? it->data(Qt::UserRole) : QVariant();
+        QMenu menu;
+        QAction *play = nullptr, *rem = nullptr;
+        if (m_playing && srcV.isValid()) {
+            play = menu.addAction(tr("Play"));
+            rem = menu.addAction(tr("Remove from playlist"));
+            menu.addSeparator();
+        }
+        QAction *addF = menu.addAction(tr("Add files…"));
+        QAction *addD = menu.addAction(tr("Add folder…"));
+        QAction *addU = menu.addAction(tr("Add URL…"));
+        menu.addSeparator();
+        QAction *all = menu.addAction(m_playlistAct->isChecked() ? tr("Hide playlist") : tr("Show playlist"));
+        QAction *r = menu.exec(m_upNext->viewport()->mapToGlobal(pos));
+        if (!r) return;
+        if (r == addF) addFiles();
+        else if (r == addD) addFolder();
+        else if (r == addU) addUrl();
+        else if (r == all) m_playlistAct->toggle();
+        else if (m_playing && (r == play || r == rem)) {
+            const int src = srcV.toInt();
+            if (r == rem) { m_playing->model()->removeRow(src); updateUpNext(); return; }
+            const QModelIndex pi = m_playing->proxy()->mapFromSource(m_playing->model()->index(src));
+            if (pi.isValid()) playFrom(m_playing, pi.row());
+        }
+    });
     nextLay->addLayout(nextHead);
     nextLay->addWidget(m_upNext, 1);
 
@@ -650,6 +680,7 @@ void MainWindow::buildUi()
     m_split->addWidget(m_aTabs);
     m_split->setStretchFactor(0, 0);
     m_split->setStretchFactor(1, 1);
+    m_split->setSizes({1, 10000});                 // default: top at its minimum, playlist gets the rest
 
     m_outputLabel = new QLabel;
     statusBar()->addPermanentWidget(m_outputLabel);
@@ -792,6 +823,57 @@ void MainWindow::buildUi()
     refreshIcons();
 }
 
+// Aurora layout: compact (default; one-line hero, cover next to the spectrum, small buttons in one
+// row with the volume) or classic (big hero card with the cover, large centred transport buttons).
+void MainWindow::setAuroraCompact(bool compact)
+{
+    if (!m_hero || m_auroraCompact == compact) return;
+    m_auroraCompact = compact;
+    m_heroLay->setContentsMargins(compact ? QMargins(14, 8, 14, 8) : QMargins(18, 18, 18, 18));
+    m_heroLay->setSpacing(compact ? 10 : 18);
+    m_heroText->setDirection(compact ? QBoxLayout::LeftToRight : QBoxLayout::TopToBottom);
+    m_heroText->setSpacing(compact ? 10 : 4);
+    m_heroText->setStretch(1, compact ? 2 : 0);
+    m_heroText->setStretch(2, compact ? 3 : 0);
+    for (QLabel *l : {m_heroTitle, m_heroSub}) {
+        l->setWordWrap(!compact);
+        l->setSizePolicy(compact ? QSizePolicy::Ignored : QSizePolicy::Preferred, QSizePolicy::Preferred);
+    }
+    m_heroLay->removeWidget(m_cover);
+    m_specRow->removeWidget(m_cover);
+    if (compact) m_specRow->insertWidget(0, m_cover);
+    else m_heroLay->insertWidget(0, m_cover);
+    if (compact) m_aSpec->setFixedHeight(128);
+    else { m_aSpec->setMinimumHeight(130); m_aSpec->setMaximumHeight(190); }
+    // transport: one row with the volume, or centred with the volume row below
+    m_transport->removeItem(m_volRow);
+    m_leftCol->removeItem(m_volRow);
+    if (compact) m_transport->addLayout(m_volRow, 1);
+    else m_leftCol->insertLayout(m_leftCol->indexOf(m_transport) + 1, m_volRow);
+    m_transport->setStretch(0, compact ? 0 : 1);
+    m_transport->setStretch(6, compact ? 0 : 1);
+    const int sz = compact ? 32 : 40;
+    for (QToolButton *b : {m_btnShuffle, m_btnPrev, m_btnNext, m_btnRepeat}) {
+        b->setFixedSize(sz, sz);
+        b->setIconSize(compact ? QSize(16, 16) : QSize(18, 18));
+    }
+    m_btnPlay->setFixedSize(compact ? 44 : 60, compact ? 44 : 60);
+    m_btnPlay->setIconSize(compact ? QSize(22, 22) : QSize(28, 28));
+    for (QToolButton *b : {m_btnStop, m_btnOpen}) {
+        b->setFixedHeight(compact ? 32 : 34);
+        b->setIconSize(compact ? QSize(14, 14) : QSize(16, 16));
+    }
+    m_btnStop->setFixedWidth(compact ? 32 : 34);
+    m_btnOpen->setFixedWidth(compact ? 46 : 48);
+    // fonts and radii come from the style sheet; the property switches them
+    setProperty("auroraClassic", !compact);
+    for (QWidget *w : std::initializer_list<QWidget *>{m_hero, m_heroKicker, m_heroTitle, m_heroSub, m_btnShuffle, m_btnPrev,
+                                                       m_btnPlay, m_btnNext, m_btnRepeat}) {
+        w->style()->unpolish(w);
+        w->style()->polish(w);
+    }
+}
+
 void MainWindow::setSonoraLayout(bool on)
 {
     if (!m_stack || (m_sonoraLayout == on && m_stack->currentIndex() == (on ? 1 : 0))) return;
@@ -812,8 +894,15 @@ void MainWindow::setSonoraLayout(bool on)
     m_stack->setCurrentIndex(on ? 1 : 0);
     menuBar()->setVisible(on);
     const bool wasVisible = isVisible();
+    if (wasVisible) hide();
     setAttribute(Qt::WA_TranslucentBackground, !on);
+    // Qt sets WA_NoSystemBackground together with WA_TranslucentBackground but does not clear it,
+    // so Sonora's panels stayed see-through until a restart. Clear it and recreate the native
+    // window, so it also gets an opaque surface format.
+    setAttribute(Qt::WA_NoSystemBackground, !on);
+    setAutoFillBackground(on);
     setWindowFlag(Qt::FramelessWindowHint, !on);
+    if (wasVisible) destroy();
     setProperty("sonoraLayout", on);
     statusBar()->setProperty("sonoraLayout", on);
     statusBar()->style()->unpolish(statusBar());
@@ -1059,7 +1148,7 @@ void MainWindow::applyTheme()
     }
     auto *app = qApp;
     if (m_theme.startsWith("aurora")) {
-        const bool dark = m_theme == "aurora-dark" || (m_theme == "aurora" && systemIsDark());
+        const bool dark = m_theme == "aurora-dark" || ((m_theme == "aurora" || m_theme == "aurora-classic") && systemIsDark());
         QApplication::setStyle(QStringLiteral("Fusion"));
         QApplication::setPalette(Aurora::palette(dark));
         app->setStyleSheet(Aurora::styleSheet(dark));
@@ -1083,6 +1172,7 @@ void MainWindow::applyTheme()
     if (m_titleIcon) m_titleIcon->setPixmap(appIcon.pixmap(QSize(24, 24), devicePixelRatioF()));
     const bool sonora = m_theme == "sonora" || m_theme == "classic-dark";
     setSonoraLayout(sonora);
+    setAuroraCompact(m_theme != "aurora-classic");
     if (m_spectrum) { m_spectrum->setProperty("aurora", !sonora); m_spectrum->update(); }
     if (m_btnPrev && m_tabs) refreshIcons();
 }
@@ -1252,6 +1342,7 @@ void MainWindow::showListMenu(PlaylistWidget *w, const QPoint &globalPos)
     QMenu menu;
     QAction *addF = menu.addAction(tr("Add files…"));
     QAction *addD = menu.addAction(tr("Add folder…"));
+    QAction *addU = menu.addAction(tr("Add URL…"));
     menu.addSeparator();
     QAction *play = menu.addAction(tr("Play"));
     QMenu *copy = menu.addMenu(tr("Copy selected to playlist"));
@@ -1261,11 +1352,14 @@ void MainWindow::showListMenu(PlaylistWidget *w, const QPoint &globalPos)
     }
     QAction *newPl = copy->addAction(tr("New playlist"));
     QAction *rem = menu.addAction(tr("Remove selected"));
+    QAction *clr = menu.addAction(tr("Clear playlist"));
 
     QAction *r = menu.exec(globalPos);
     if (!r) return;
     if (r == addF) { addFiles(); return; }
     if (r == addD) { addFolder(); return; }
+    if (r == addU) { addUrl(); return; }
+    if (r == clr) { w->model()->clear(); updateUpNext(); return; }
     if (r == play) {
         const QModelIndex i = w->view()->currentIndex();
         if (i.isValid()) playFrom(w, i.row());
@@ -1883,7 +1977,7 @@ void MainWindow::closeEvent(QCloseEvent *e)
     s.setValue("closeToTray", m_closeToTrayAct->isChecked());
     s.setValue("theme", m_theme);
     s.setValue("playlistVisible", m_playlistAct->isChecked());
-    s.setValue("splitter", m_split->saveState());
+    s.setValue("splitter2", m_split->saveState());
     s.setValue("playlistHeader", current()->saveHeader());
     savePlaylists();
     m_player->stop();
