@@ -1,3 +1,10 @@
+linux-aurora-player (0.6.2) unstable; urgency=medium
+
+  * Aurora transport buttons are smaller and square with rounded corners
+    (40 px, play / pause 60 px) instead of round.
+
+ -- JGu <noreply@example.invalid>  Sat, 28 Nov 2026 09:02:28 +0100
+
 linux-aurora-player (0.6.1) unstable; urgency=medium
 
   * Single instance: opening a file while the player runs hands it to the

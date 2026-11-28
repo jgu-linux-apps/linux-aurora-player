@@ -122,7 +122,7 @@ older distributions (e.g. Debian 12 with Qt 6.4) are not tested.
 
 ## Debian package (Debian 13 "trixie", Ubuntu 26.04 LTS)
 
-    ./build-deb.sh            # -> ../linux-aurora-player_0.6.1_<arch>.deb
+    ./build-deb.sh            # -> ../linux-aurora-player_0.6.2_<arch>.deb
 
 There is no architecture-specific code: run the same command on an amd64 or arm64 machine / chroot / container
 (`sbuild`, `pbuilder`, or a Docker `arm64v8/debian:trixie` container with QEMU). Cross-compiling with `dpkg-buildpackage -aarm64`

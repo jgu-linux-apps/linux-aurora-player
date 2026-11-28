@@ -369,22 +369,22 @@ void MainWindow::buildUi()
     m_meter->setConfig(m_cfg.meter);
 
     // ---- transport: round buttons, one big play/pause in the middle
-    auto mkBtn = [this](const QString &tip, bool checkable = false, int size = 46) {
+    auto mkBtn = [this](const QString &tip, bool checkable = false, int size = 40) {
         auto *b = new QToolButton;
         b->setObjectName("round");
         b->setToolTip(tip);
         b->setToolButtonStyle(Qt::ToolButtonIconOnly);
         b->setCheckable(checkable);
         b->setFixedSize(size, size);
-        b->setIconSize(QSize(20, 20));
+        b->setIconSize(QSize(18, 18));
         b->setFocusPolicy(Qt::NoFocus);         // so Space always means play/pause
         b->setCursor(Qt::PointingHandCursor);
         return b;
     };
     m_btnPrev    = mkBtn(tr("Previous (within filter)"));
-    m_btnPlay    = mkBtn(tr("Play / Pause (Space)"), false, 76);
+    m_btnPlay    = mkBtn(tr("Play / Pause (Space)"), false, 60);
     m_btnPlay->setObjectName("bigPlay");
-    m_btnPlay->setIconSize(QSize(34, 34));
+    m_btnPlay->setIconSize(QSize(28, 28));
     m_btnPause   = m_btnPlay;                   // one button for play and pause
     m_btnStop    = mkBtn(tr("Stop"));
     m_btnNext    = mkBtn(tr("Next (within filter)"));
@@ -1059,7 +1059,7 @@ void MainWindow::refreshIcons()
         QPalette white = pal;               // the big play button is accent-filled: white glyph
         white.setColor(QPalette::Active, QPalette::ButtonText, Qt::white);
         white.setColor(QPalette::Disabled, QPalette::ButtonText, Qt::white);
-        m_btnPlay->setIcon(make(m_player->state() == Player::Playing ? Pause : Play, white, 34, dpr));
+        m_btnPlay->setIcon(make(m_player->state() == Player::Playing ? Pause : Play, white, 28, dpr));
     }
     m_btnStop->setIcon(make(Stop, pal, sz, dpr));
     m_btnNext->setIcon(make(Next, pal, sz, dpr));
