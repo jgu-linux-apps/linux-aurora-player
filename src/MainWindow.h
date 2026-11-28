@@ -22,6 +22,7 @@ class QListWidget;
 class QSplitter;
 class QActionGroup;
 class QFrame;
+class QDBusVariant;
 class LevelMeter;
 class SpectrumAnalyzer;
 class PlaylistWidget;
@@ -76,6 +77,7 @@ private slots:
     void refreshManager();
     void playPlaylistAt(int index);
     void about();
+    void onPortalSetting(const QString &ns, const QString &key, const QDBusVariant &value);
     void quitApp();
 
 private:
@@ -92,6 +94,7 @@ private:
     void updateOutputLabel();
     void applyTheme();
     bool systemIsDark() const;
+    void readSystemScheme();
     void updateHero();
     void updateUpNext();
     void setSonoraLayout(bool on);
@@ -131,6 +134,8 @@ private:
     QAction *m_closeToTrayAct = nullptr;
     bool m_quitting = false;
     bool m_sonoraLayout = false;
+    int m_portalScheme = -1;                // XDG portal color-scheme: 0 default, 1 dark, 2 light, -1 unknown
+    bool m_gsettingsDark = false;
     class QStackedWidget *m_stack = nullptr;
     QWidget *m_aMeter = nullptr, *m_aSeek = nullptr, *m_aTime = nullptr, *m_aVol = nullptr, *m_aSpec = nullptr, *m_aTabs = nullptr;
     QWidget *m_sMeter = nullptr, *m_sSeek = nullptr, *m_sTime = nullptr, *m_sVol = nullptr, *m_sSpec = nullptr, *m_sTabs = nullptr;

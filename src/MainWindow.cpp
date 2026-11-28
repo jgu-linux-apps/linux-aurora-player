@@ -50,6 +50,10 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusMessage>
+#include <QDBusVariant>
 #include <QImageReader>
 #include <QProcess>
 #include <QPushButton>
@@ -360,6 +364,11 @@ void MainWindow::buildUi()
         applyTheme();
     });
     connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this] { applyTheme(); });
+    readSystemScheme();
+    QDBusConnection::sessionBus().connect(QStringLiteral("org.freedesktop.portal.Desktop"),
+                                          QStringLiteral("/org/freedesktop/portal/desktop"),
+                                          QStringLiteral("org.freedesktop.portal.Settings"), QStringLiteral("SettingChanged"),
+                                          this, SLOT(onPortalSetting(QString,QString,QDBusVariant)));
 
     act(menuBar()->addMenu(tr("&Help")), tr("&About"), {}, &MainWindow::about);
 
@@ -1003,9 +1012,39 @@ void MainWindow::updateHero()
 }
 
 // ================================================================== theme / icons
+// Light / dark of the desktop. Qt alone often does not know it on GNOME (no GTK platform theme), so the
+// XDG desktop portal (org.freedesktop.appearance color-scheme: 1 = dark) is asked first, then gsettings.
 bool MainWindow::systemIsDark() const
 {
-    return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;
+    if (m_portalScheme >= 0) return m_portalScheme == 1;
+    if (QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark) return true;
+    return m_gsettingsDark;
+}
+
+void MainWindow::readSystemScheme()
+{
+    QDBusInterface portal(QStringLiteral("org.freedesktop.portal.Desktop"), QStringLiteral("/org/freedesktop/portal/desktop"),
+                          QStringLiteral("org.freedesktop.portal.Settings"), QDBusConnection::sessionBus());
+    const QDBusMessage r = portal.call(QStringLiteral("ReadOne"), QStringLiteral("org.freedesktop.appearance"),
+                                       QStringLiteral("color-scheme"));
+    m_portalScheme = -1;
+    if (r.type() == QDBusMessage::ReplyMessage && !r.arguments().isEmpty()) {
+        QVariant v = r.arguments().first();
+        if (v.canConvert<QDBusVariant>()) v = v.value<QDBusVariant>().variant();
+        bool ok = false;
+        const uint u = v.toUInt(&ok);
+        if (ok) m_portalScheme = int(u);
+    }
+    QProcess gs;
+    gs.start(QStringLiteral("gsettings"), {"get", "org.gnome.desktop.interface", "color-scheme"});
+    m_gsettingsDark = gs.waitForFinished(1500) && gs.readAllStandardOutput().contains("dark");
+}
+
+void MainWindow::onPortalSetting(const QString &ns, const QString &key, const QDBusVariant &value)
+{
+    if (ns != QLatin1String("org.freedesktop.appearance") || key != QLatin1String("color-scheme")) return;
+    m_portalScheme = int(value.variant().toUInt());
+    applyTheme();
 }
 
 void MainWindow::applyTheme()

@@ -1,3 +1,12 @@
+linux-aurora-player (0.6.3) unstable; urgency=medium
+
+  * Fix: "Aurora (follows system)" stayed light in GNOME dark mode, because
+    Qt alone did not see the desktop colour scheme. The scheme is now read
+    from the XDG desktop portal (live updates through SettingChanged), with
+    gsettings as fallback. The dock icon uses the same detection.
+
+ -- JGu <noreply@example.invalid>  Sat, 28 Nov 2026 09:04:57 +0100
+
 linux-aurora-player (0.6.2) unstable; urgency=medium
 
   * Aurora transport buttons are smaller and square with rounded corners
